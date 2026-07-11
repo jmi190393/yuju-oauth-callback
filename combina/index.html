@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3b5bdb">
+<title>Combina — asesor de imagen para daltónicos</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f5f9;
+    --surface: #ffffff;
+    --surface-2: #eef0f6;
+    --ink: #14171f;
+    --ink-soft: #5a6072;
+    --line: #dfe2ec;
+    --accent: #3b5bdb;
+    --accent-ink: #ffffff;
+    /* Semántica SEGURA para daltonismo (paleta de Wong) + siempre con ícono y texto */
+    --ok-bg:#e2f3ec; --ok-ink:#046a4e; --ok-line:#a9dcc8; --ok-solid:#009e73;
+    --warn-bg:#fdf1de; --warn-ink:#8a5a06; --warn-line:#f2d7a4; --warn-solid:#e69f00;
+    --bad-bg:#fbe9f2; --bad-ink:#9c2f6b; --bad-line:#efc3dc; --bad-solid:#cc79a7;
+    --shadow: 0 1px 2px rgba(20,23,31,.06), 0 10px 30px rgba(20,23,31,.05);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0f1319; --surface:#181d26; --surface-2:#212734; --ink:#eef0f6;
+      --ink-soft:#9aa2b6; --line:#2c3342; --accent:#7b93f6; --accent-ink:#0f1319;
+      --ok-bg:#123026; --ok-ink:#63d3ab; --ok-line:#1f5140; --ok-solid:#12b585;
+      --warn-bg:#332614; --warn-ink:#f0c26e; --warn-line:#59431e; --warn-solid:#e69f00;
+      --bad-bg:#331d2a; --bad-ink:#e79cc4; --bad-line:#5a3149; --bad-solid:#cc79a7;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{--bg:#0f1319;--surface:#181d26;--surface-2:#212734;--ink:#eef0f6;--ink-soft:#9aa2b6;--line:#2c3342;--accent:#7b93f6;--accent-ink:#0f1319;--ok-bg:#123026;--ok-ink:#63d3ab;--ok-line:#1f5140;--ok-solid:#12b585;--warn-bg:#332614;--warn-ink:#f0c26e;--warn-line:#59431e;--warn-solid:#e69f00;--bad-bg:#331d2a;--bad-ink:#e79cc4;--bad-line:#5a3149;--bad-solid:#cc79a7;--shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.3);}
+  :root[data-theme="light"]{--bg:#f4f5f9;--surface:#fff;--surface-2:#eef0f6;--ink:#14171f;--ink-soft:#5a6072;--line:#dfe2ec;--accent:#3b5bdb;--accent-ink:#fff;--ok-bg:#e2f3ec;--ok-ink:#046a4e;--ok-line:#a9dcc8;--ok-solid:#009e73;--warn-bg:#fdf1de;--warn-ink:#8a5a06;--warn-line:#f2d7a4;--warn-solid:#e69f00;--bad-bg:#fbe9f2;--bad-ink:#9c2f6b;--bad-line:#efc3dc;--bad-solid:#cc79a7;--shadow:0 1px 2px rgba(20,23,31,.06),0 10px 30px rgba(20,23,31,.05);}
+
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:720px; margin:0 auto; padding:22px 16px 96px; }
+
+  header.app { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; }
+  .brand { display:flex; align-items:center; gap:11px; }
+  .logo { width:40px; height:40px; border-radius:11px; background:var(--accent); flex:none; position:relative; overflow:hidden; }
+  .logo::before,.logo::after{ content:""; position:absolute; border-radius:50%; }
+  .logo::before{ width:20px;height:20px;background:var(--warn-solid);top:6px;left:6px; }
+  .logo::after{ width:20px;height:20px;background:var(--ok-solid);bottom:6px;right:6px;mix-blend-mode:normal;opacity:.92; }
+  .wordmark { font-size:20px; font-weight:800; letter-spacing:-.02em; }
+  .wordmark small { display:block; font-size:11.5px; font-weight:500; letter-spacing:.01em; color:var(--ink-soft); }
+  .theme-btn { background:var(--surface); border:1px solid var(--line); color:var(--ink-soft); border-radius:100px; padding:8px 13px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .theme-btn:hover{ color:var(--ink); }
+
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); margin-bottom:16px; }
+  .card h2 { font-size:15px; font-weight:700; margin:0 0 4px; display:flex; align-items:center; gap:9px; letter-spacing:-.01em; }
+  .card .lead { color:var(--ink-soft); font-size:13.5px; margin:0 0 14px; }
+  .step { background:var(--accent); color:var(--accent-ink); width:23px; height:23px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:800; flex:none; }
+
+  label.field { display:block; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); font-weight:600; margin:14px 0 6px; }
+
+  .drop { border:1.5px dashed var(--line); border-radius:12px; padding:26px 16px; text-align:center; color:var(--ink-soft); cursor:pointer; transition:border-color .15s,background .15s; background:var(--surface-2); }
+  .drop:hover,.drop.drag{ border-color:var(--accent); }
+  .drop strong{ color:var(--ink); display:block; font-size:15.5px; margin-bottom:3px; }
+  .drop small{ font-size:12.5px; }
+  input[type=file]{ display:none; }
+
+  input[type=text],select{ width:100%; font:inherit; font-size:15px; padding:11px 12px; border:1px solid var(--line); border-radius:10px; background:var(--surface); color:var(--ink); }
+  input[type=text]:focus,select:focus{ outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .row>*{ flex:1; min-width:150px; }
+
+  button.primary{ font:inherit; font-size:15px; font-weight:700; background:var(--accent); color:var(--accent-ink); border:none; border-radius:10px; padding:12px 18px; cursor:pointer; }
+  button.primary:disabled{ opacity:.4; cursor:not-allowed; }
+  button.ghost{ font:inherit; font-size:14px; font-weight:700; background:transparent; color:var(--accent); border:1px solid var(--line); border-radius:10px; padding:11px 16px; cursor:pointer; }
+  button.ghost:disabled{ opacity:.4; cursor:not-allowed; }
+  button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+
+  .empty{ color:var(--ink-soft); font-size:14px; text-align:center; padding:16px 0; }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:12px; }
+  .item{ border:2px solid var(--line); border-radius:14px; overflow:hidden; background:var(--surface-2); position:relative; cursor:pointer; transition:border-color .12s; }
+  .item.sel{ border-color:var(--accent); }
+  .item .thumb{ width:100%; aspect-ratio:1/1; object-fit:cover; display:block; }
+  .item .meta{ padding:9px 10px 11px; }
+  .item .cat{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); font-weight:600; }
+  .item .cname{ font-weight:700; font-size:14px; display:flex; align-items:center; gap:7px; margin-top:3px; }
+  .swatch{ width:16px; height:16px; border-radius:5px; border:1px solid rgba(128,128,128,.45); flex:none; }
+  .item .check{ position:absolute; top:8px; left:8px; width:25px; height:25px; border-radius:50%; background:var(--accent); border:2px solid #fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:800; }
+  .item:not(.sel) .check{ display:none; }
+  .item .del{ position:absolute; top:8px; right:8px; width:27px; height:27px; border-radius:50%; background:rgba(15,19,25,.55); color:#fff; border:none; cursor:pointer; font-size:16px; line-height:1; }
+
+  /* Veredicto: se distingue por ICONO + TEXTO + TEXTURA (borde y patrón), no solo por color */
+  .verdict{ border-radius:12px; padding:15px 16px; margin-bottom:14px; border:2px solid var(--line); display:flex; gap:13px; align-items:flex-start; }
+  .verdict .icon{ width:36px; height:36px; flex:none; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; color:#fff; }
+  .verdict.ok{ background:var(--ok-bg); border-color:var(--ok-solid); border-style:solid; color:var(--ok-ink); }
+  .verdict.ok .icon{ background:var(--ok-solid); border-radius:10px; }
+  .verdict.warn{ background:var(--warn-bg); border-color:var(--warn-solid); border-style:dashed; color:var(--warn-ink); }
+  .verdict.warn .icon{ background:var(--warn-solid); border-radius:50%; }
+  .verdict.bad{ background:var(--bad-bg); border-color:var(--bad-solid); border-style:dotted; color:var(--bad-ink);
+    background-image:repeating-linear-gradient(45deg, transparent 0 8px, color-mix(in srgb, var(--bad-solid) 14%, transparent) 8px 16px); }
+  .verdict.bad .icon{ background:var(--bad-solid); border-radius:2px; }
+  .verdict .big{ font-size:16.5px; font-weight:800; }
+  .verdict .sub{ font-size:14px; }
+
+  .setline{ font-size:13px; color:var(--ink-soft); margin:2px 0 10px; }
+  .pair{ display:flex; align-items:center; gap:11px; font-size:14px; padding:11px 0; border-top:1px solid var(--line); }
+  .pair:first-of-type{ border-top:none; }
+  .pair .dots{ display:flex; gap:4px; flex:none; }
+  .pair .mini{ width:17px; height:17px; border-radius:5px; border:1px solid rgba(128,128,128,.45); }
+  .pair .txt{ flex:1; }
+  .pair .txt .muted{ color:var(--ink-soft); }
+  .pair .tag{ font-size:11px; font-weight:800; padding:4px 9px; border-radius:100px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; }
+  .tag.ok{ background:var(--ok-bg); color:var(--ok-ink); border:2px solid var(--ok-solid); border-style:solid; }
+  .tag.warn{ background:var(--warn-bg); color:var(--warn-ink); border:2px dashed var(--warn-solid); }
+  .tag.bad{ background:var(--bad-bg); color:var(--bad-ink); border:2px dotted var(--bad-solid); }
+  .tag .ic{ font-weight:900; }
+
+  .selbar{ position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter:blur(10px); border-top:1px solid var(--line); }
+  .selbar .inner{ max-width:720px; margin:0 auto; display:flex; gap:10px; align-items:center; }
+  .selbar .count{ font-size:13px; color:var(--ink-soft); flex:1; font-weight:600; }
+  .selbar.hidden{ display:none; }
+
+  .foot{ text-align:center; color:var(--ink-soft); font-size:12.5px; margin-top:24px; line-height:1.7; }
+  .foot strong{ color:var(--ink); }
+  .hidden{ display:none !important; }
+  @media (prefers-reduced-motion: reduce){ *{ scroll-behavior:auto !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"></div>
+      <div class="wordmark">Combina<small>Asesor de imagen para daltónicos</small></div>
+    </div>
+    <button class="theme-btn" id="theme-btn" type="button">🌗 Tema</button>
+  </header>
+
+  <section class="card">
+    <h2><span class="step">1</span> Agregar una prenda</h2>
+    <p class="lead">Toma o sube una foto. Detecto el color por ti y le pongo nombre.</p>
+    <div class="drop" id="drop">
+      <strong id="drop-title">📷 Tomar o elegir foto</strong>
+      <small>Funciona mejor sobre fondo claro y liso</small>
+    </div>
+    <input type="file" id="file-input" accept="image/*">
+
+    <div id="add-fields" class="hidden">
+      <img id="preview" alt="Vista previa de la prenda" style="width:100%;max-height:260px;object-fit:contain;border-radius:12px;margin-top:14px;background:var(--surface-2);">
+      <div class="row" style="margin-top:12px;">
+        <div>
+          <label class="field" for="cat">Tipo de prenda</label>
+          <select id="cat">
+            <option value="Parte de arriba">Arriba (blusa, camisa, playera)</option>
+            <option value="Parte de abajo">Abajo (pantalón, short, falda)</option>
+            <option value="Vestido/Traje">Vestido o traje</option>
+            <option value="Abrigo">Abrigo o chamarra</option>
+            <option value="Zapatos">Zapatos</option>
+            <option value="Accesorio">Accesorio</option>
+          </select>
+        </div>
+        <div>
+          <label class="field" for="cname-sel">Color <span id="conf" style="text-transform:none;letter-spacing:0;font-weight:400;"></span></label>
+          <select id="cname-sel"></select>
+        </div>
+      </div>
+      <label class="field" for="name">Nombre (opcional)</label>
+      <input type="text" id="name" placeholder="Ej. Camisa favorita">
+      <div class="actions">
+        <button class="primary" id="save-btn" type="button">Guardar en mi ropero</button>
+        <button class="ghost" id="cancel-btn" type="button">Cancelar</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="step">2</span> Mi ropero <span id="closet-count" style="color:var(--ink-soft);font-weight:500;font-size:13px;"></span></h2>
+    <p class="lead">Toca <strong>1 prenda</strong> y te digo qué le queda. Toca <strong>2 o más</strong> para evaluar el conjunto completo.</p>
+    <div class="empty" id="closet-empty">Aún no has agregado ropa. Empieza arriba 👆</div>
+    <div class="grid" id="closet"></div>
+  </section>
+
+  <section class="card hidden" id="result-card">
+    <h2><span class="step">3</span> Resultado</h2>
+    <div id="result"></div>
+  </section>
+
+  <p class="foot">
+    Todo se procesa y se guarda <strong>solo en tu dispositivo</strong>. Tus fotos no se suben a ningún servidor.<br>
+    Cada veredicto se distingue por <strong>ícono, texto y textura del borde</strong> (✓ sólido · ! rayas · ✕ punteado), no por color — pensado para daltonismo rojo-verde marcado.<br>
+    Truco: los <strong>neutros</strong> (negro, blanco, gris, beige, azul marino, mezclilla) combinan con casi todo.
+  </p>
+</div>
+
+<div class="selbar hidden" id="selbar">
+  <div class="inner">
+    <span class="count" id="selcount">0 seleccionadas</span>
+    <button class="primary" id="eval-btn" type="button">Evaluar conjunto</button>
+  </div>
+</div>
+
+<canvas id="cv" class="hidden"></canvas>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const STORE = "combina.closet.v1";
+
+(function(){
+  const saved = localStorage.getItem("combina.theme");
+  if (saved) document.documentElement.setAttribute("data-theme", saved);
+  $("theme-btn").addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme");
+    const dark = cur ? cur === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const next = dark ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("combina.theme", next);
+  });
+})();
+
+function rgb2hsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+  let h=0; const l=(max+min)/2;
+  const s = d===0 ? 0 : d/(1-Math.abs(2*l-1));
+  if(d!==0){
+    if(max===r) h=((g-b)/d)%6;
+    else if(max===g) h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h*=60; if(h<0) h+=360;
+  }
+  return {h, s, l};
+}
+
+function nameColor(r,g,b){
+  const {h,s,l} = rgb2hsl(r,g,b);
+  if (l < 0.10) return {name:"Negro", neutral:true, h,s,l};
+  if (l > 0.90 && s < 0.18) return {name:"Blanco", neutral:true, h,s,l};
+  if (s < 0.12){
+    if (l < 0.30) return {name:"Gris oscuro", neutral:true, h,s,l};
+    if (l < 0.62) return {name:"Gris", neutral:true, h,s,l};
+    return {name:"Gris claro", neutral:true, h,s,l};
+  }
+  if (h>=20 && h<=48 && s<0.55){
+    if (l < 0.32) return {name:"Café", neutral:true, h,s,l};
+    if (l < 0.62) return {name:"Camel / tostado", neutral:true, h,s,l};
+    return {name:"Beige", neutral:true, h,s,l};
+  }
+  if (h>=200 && h<=255 && l<0.34) return {name:"Azul marino", neutral:true, h,s,l};
+
+  let base;
+  if (h<14 || h>=346) base="Rojo";
+  else if (h<40) base="Naranja";
+  else if (h<66) base="Amarillo";
+  else if (h<95) base="Verde lima";
+  else if (h<160) base="Verde";
+  else if (h<200) base="Turquesa";
+  else if (h<250) base="Azul";
+  else if (h<290) base="Morado";
+  else if (h<330) base="Rosa";
+  else base="Rojo";
+
+  let name;
+  if (s < 0.35 && l > 0.6) name = "Pastel " + base.toLowerCase();
+  else if (l > 0.72) name = base + " claro";
+  else if (l < 0.30) name = base + " oscuro";
+  else name = base;
+  return {name, neutral:false, h,s,l};
+}
+
+const COLOR_OPTIONS = [
+  ["Negro",[25,25,25]],["Blanco",[245,245,245]],["Gris",[128,128,128]],
+  ["Gris claro",[190,190,190]],["Gris oscuro",[70,70,70]],
+  ["Beige",[224,205,169]],["Camel / tostado",[176,132,80]],["Café",[92,64,42]],
+  ["Azul marino",[30,42,78]],["Azul",[45,95,200]],["Azul claro",[120,170,225]],
+  ["Turquesa",[35,170,175]],
+  ["Rojo",[200,40,40]],["Rojo oscuro",[130,25,25]],
+  ["Naranja",[225,120,40]],["Amarillo",[230,200,55]],
+  ["Verde",[55,140,70]],["Verde oscuro",[35,85,45]],["Verde lima",[150,190,60]],
+  ["Morado",[120,70,170]],["Rosa",[225,110,160]],["Pastel rosa",[240,190,205]]
+];
+
+function optionMeta(name){
+  const found = COLOR_OPTIONS.find(o=>o[0]===name)
+    || COLOR_OPTIONS.find(o=>name.toLowerCase().includes(o[0].toLowerCase().split(" ")[0]));
+  const rgb = found ? found[1] : [128,128,128];
+  const m = nameColor(rgb[0],rgb[1],rgb[2]);
+  return {rgb, h:m.h, s:m.s, l:m.l, neutral:m.neutral};
+}
+
+function dominantColor(img){
+  const cv = $("cv"), ctx = cv.getContext("2d", {willReadFrequently:true});
+  const W = 90, H = Math.max(1, Math.round(W * img.naturalHeight / img.naturalWidth));
+  cv.width=W; cv.height=H;
+  ctx.drawImage(img,0,0,W,H);
+  const x0=Math.round(W*0.18), x1=Math.round(W*0.82), y0=Math.round(H*0.18), y1=Math.round(H*0.82);
+  let data;
+  try { data = ctx.getImageData(x0,y0,Math.max(1,x1-x0),Math.max(1,y1-y0)).data; }
+  catch(e){ return null; }
+  const buckets = {};
+  for(let i=0;i<data.length;i+=4){
+    const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
+    if(a<125) continue;
+    const {s,l}=rgb2hsl(r,g,b);
+    let weight = 1;
+    if(l>0.93 || l<0.06) weight = 0.25;
+    if(s<0.08 && l>0.8) weight = 0.15;
+    const key = (r>>4)+","+(g>>4)+","+(b>>4);
+    if(!buckets[key]) buckets[key]={r:0,g:0,b:0,w:0};
+    const bk=buckets[key]; bk.r+=r*weight; bk.g+=g*weight; bk.b+=b*weight; bk.w+=weight;
+  }
+  let best=null, total=0;
+  for(const k in buckets){ const bk=buckets[k]; total+=bk.w; if(!best||bk.w>best.w) best=bk; }
+  if(!best||best.w===0) return null;
+  const r=Math.round(best.r/best.w), g=Math.round(best.g/best.w), b=Math.round(best.b/best.w);
+  return {rgb:[r,g,b], conf: total ? best.w/total : 0};
+}
+
+function toSmallDataURL(img, max=420){
+  const cv=document.createElement("canvas");
+  const scale=Math.min(1, max/Math.max(img.naturalWidth,img.naturalHeight));
+  cv.width=Math.round(img.naturalWidth*scale);
+  cv.height=Math.round(img.naturalHeight*scale);
+  cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+  return cv.toDataURL("image/jpeg", 0.72);
+}
+
+let closet = load();
+let selected = new Set();
+let pending = null;
+
+function load(){ try { return JSON.parse(localStorage.getItem(STORE)) || []; } catch(e){ return []; } }
+function save(){
+  try { localStorage.setItem(STORE, JSON.stringify(closet)); }
+  catch(e){ alert("No se pudo guardar (espacio lleno). Elimina alguna prenda vieja."); }
+}
+
+$("drop").addEventListener("click", ()=> $("file-input").click());
+["dragover","dragenter"].forEach(ev=>$("drop").addEventListener(ev,e=>{e.preventDefault();$("drop").classList.add("drag");}));
+["dragleave","drop"].forEach(ev=>$("drop").addEventListener(ev,e=>{e.preventDefault();$("drop").classList.remove("drag");}));
+$("drop").addEventListener("drop", e=>{ if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+$("file-input").addEventListener("change", e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const det = dominantColor(img);
+      const dataUrl = toSmallDataURL(img);
+      const rgb = det ? det.rgb : [128,128,128];
+      const meta = nameColor(rgb[0],rgb[1],rgb[2]);
+      pending = { dataUrl, rgb, name:meta.name, neutral:meta.neutral, h:meta.h, s:meta.s, l:meta.l };
+      $("preview").src = dataUrl;
+      buildColorSelect(meta.name);
+      $("conf").textContent = det ? "· revisa que sea correcto" : "· elígelo a mano";
+      $("name").value = "";
+      $("cat").selectedIndex = 0;
+      $("add-fields").classList.remove("hidden");
+      $("add-fields").scrollIntoView({behavior:"smooth", block:"nearest"});
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function buildColorSelect(selectedName){
+  const sel = $("cname-sel"); sel.innerHTML="";
+  const names = COLOR_OPTIONS.map(o=>o[0]);
+  if(!names.includes(selectedName)){ const o=document.createElement("option"); o.value=selectedName; o.textContent=selectedName+" (detectado)"; sel.appendChild(o); }
+  COLOR_OPTIONS.forEach(o=>{ const op=document.createElement("option"); op.value=o[0]; op.textContent=o[0]; sel.appendChild(op); });
+  sel.value = selectedName;
+  sel.onchange = ()=>{
+    const meta = optionMeta(sel.value);
+    pending.rgb=meta.rgb; pending.name=sel.value; pending.neutral=meta.neutral;
+    pending.h=meta.h; pending.s=meta.s; pending.l=meta.l;
+  };
+}
+
+$("cancel-btn").addEventListener("click", resetAdd);
+function resetAdd(){ pending=null; $("add-fields").classList.add("hidden"); $("file-input").value=""; }
+
+$("save-btn").addEventListener("click", ()=>{
+  if(!pending) return;
+  closet.push({
+    id: Date.now()+"-"+Math.random().toString(36).slice(2,7),
+    img: pending.dataUrl, cat: $("cat").value, name: $("name").value.trim(),
+    color: pending.name, rgb: pending.rgb, neutral: pending.neutral,
+    h: pending.h, s: pending.s, l: pending.l
+  });
+  save(); resetAdd(); render();
+});
+
+function render(){
+  const grid=$("closet"); grid.innerHTML="";
+  $("closet-empty").classList.toggle("hidden", closet.length>0);
+  $("closet-count").textContent = closet.length ? "("+closet.length+")" : "";
+  closet.forEach(item=>{
+    const el=document.createElement("div");
+    el.className="item"+(selected.has(item.id)?" sel":"");
+    const rgb=`rgb(${item.rgb.join(",")})`;
+    el.innerHTML = `
+      <div class="check">✓</div>
+      <button class="del" title="Eliminar" data-del="${item.id}" aria-label="Eliminar prenda">×</button>
+      <img class="thumb" src="${item.img}" alt="">
+      <div class="meta">
+        <div class="cat">${escapeHtml(item.cat)}</div>
+        <div class="cname"><span class="swatch" style="background:${rgb}"></span>${escapeHtml(item.color)}</div>
+        ${item.name?`<div style="font-size:12px;color:var(--ink-soft);margin-top:3px;">${escapeHtml(item.name)}</div>`:""}
+      </div>`;
+    el.addEventListener("click", e=>{
+      if(e.target.dataset.del) return;
+      if(selected.has(item.id)) selected.delete(item.id); else selected.add(item.id);
+      render();
+    });
+    el.querySelector("[data-del]").addEventListener("click", ()=>{
+      if(confirm("¿Eliminar esta prenda?")){ closet=closet.filter(c=>c.id!==item.id); selected.delete(item.id); save(); render(); }
+    });
+    grid.appendChild(el);
+  });
+  updateSelbar();
+}
+function escapeHtml(s){ return (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function updateSelbar(){
+  const n=selected.size;
+  $("selbar").classList.toggle("hidden", n===0);
+  $("eval-btn").disabled = n<2;
+  if(n===1){
+    $("selcount").textContent = "1 prenda — abajo te digo qué le queda";
+    renderMatch(selItems()[0], false);       // al elegir 1 prenda: automático
+  } else if(n>=2){
+    $("selcount").textContent = n+" seleccionadas — toca «Evaluar conjunto»";
+    $("result-card").classList.add("hidden"); // el resultado anterior queda obsoleto
+  } else {
+    $("selcount").textContent = "0 seleccionadas";
+    $("result-card").classList.add("hidden");
+  }
+}
+
+function hueDiff(a,b){ let d=Math.abs(a-b)%360; return d>180?360-d:d; }
+
+function harmony(a,b){
+  if(a.neutral || b.neutral)
+    return {score:92, cls:"ok", label:"Combina", why:"Uno es neutro, así que combina con casi todo."};
+  const dh = hueDiff(a.h,b.h);
+  let score, why;
+  if(dh<=18){ score=82; why="Tonos muy parecidos (look monocromático): se ve pulido."; }
+  else if(dh<=55){ score=88; why="Colores vecinos en la rueda (análogos): combinación segura y armónica."; }
+  else if(dh>=150){ score=74; why="Colores opuestos (contraste fuerte): funciona si te gusta destacar."; }
+  else if(dh>=105 && dh<140){ score=66; why="Combinación triádica: vistosa, úsala con moderación."; }
+  else { score=42; why="Tienden a chocar (ni vecinos ni opuestos)."; }
+  if(a.s>0.6 && b.s>0.6 && score<85){ score-=12; why+=" Además ambos son muy intensos."; }
+  score=Math.max(5,Math.min(98,score));
+  const cls = score>=72?"ok":score>=52?"warn":"bad";
+  const label = score>=72?"Combina":score>=52?"Con cuidado":"Evítalo";
+  return {score,cls,label,why};
+}
+function verdictFromScore(s){
+  if(s>=72) return {cls:"ok", icon:"✓", big:"Se ve bien", tip:"Adelante, es una buena combinación."};
+  if(s>=52) return {cls:"warn", icon:"!", big:"Se puede, con cuidado", tip:"Funciona, pero no es lo más seguro. Mira las notas."};
+  return {cls:"bad", icon:"✕", big:"Mejor evítalo", tip:"Los colores tienden a pelearse. Cambia una prenda."};
+}
+function tagIcon(cls){ return cls==="ok"?"✓":cls==="warn"?"!":"✕"; }
+
+function selItems(){ return closet.filter(c=>selected.has(c.id)); }
+function miniDots(item){ return `<span class="mini" style="background:rgb(${item.rgb.join(",")})"></span>`; }
+
+$("eval-btn").addEventListener("click", ()=>{
+  const items = selItems();
+  if(items.length<2) return;
+  const pairs=[]; let sum=0, worst=100;
+  for(let i=0;i<items.length;i++) for(let j=i+1;j<items.length;j++){
+    const h=harmony(items[i],items[j]);
+    pairs.push({a:items[i],b:items[j],h});
+    sum+=h.score; worst=Math.min(worst,h.score);
+  }
+  const overall = Math.round((sum/pairs.length)*0.6 + worst*0.4);
+  const v = verdictFromScore(overall);
+  let html = `<div class="verdict ${v.cls}"><div class="icon">${v.icon}</div><div><div class="big">${v.big}</div><div class="sub">${v.tip}</div></div></div>`;
+  html += `<div class="setline">Prendas: ${items.map(i=>escapeHtml(i.color)).join(" + ")}</div>`;
+  pairs.sort((x,y)=>x.h.score-y.h.score);
+  pairs.forEach(p=>{
+    html += `<div class="pair">
+      <span class="dots">${miniDots(p.a)}${miniDots(p.b)}</span>
+      <span class="txt"><strong>${escapeHtml(p.a.color)}</strong> + <strong>${escapeHtml(p.b.color)}</strong><br><span class="muted">${p.h.why}</span></span>
+      <span class="tag ${p.h.cls}">${tagIcon(p.h.cls)} ${p.h.label}</span>
+    </div>`;
+  });
+  showResult(html, true);
+});
+
+function renderMatch(base, scroll){
+  if(!base) return;
+  const others = closet.filter(c=>c.id!==base.id);
+  let html = `<div style="display:flex;align-items:center;gap:9px;margin-bottom:14px;font-size:15px;">
+      <span class="swatch" style="width:21px;height:21px;background:rgb(${base.rgb.join(",")})"></span>
+      Con <strong style="margin:0 2px;">${escapeHtml(base.color)}</strong>${base.name?` · ${escapeHtml(base.name)}`:""}
+    </div>`;
+  if(!others.length){
+    html += `<div class="empty">Agrega más prendas al ropero para ver con qué combina.</div>`;
+    showResult(html, scroll); return;
+  }
+  const ranked = others.map(o=>({o, h:harmony(base,o)})).sort((x,y)=>y.h.score-x.h.score);
+  const good = ranked.filter(r=>r.h.cls==="ok");
+  // Resumen claro: qué queda y se ve bien
+  if(good.length){
+    html += `<div class="verdict ok"><div class="icon">✓</div><div>
+      <div class="big">Queda bien con:</div>
+      <div class="sub">${good.map(r=>escapeHtml(r.o.color)+(r.o.name?" ("+escapeHtml(r.o.name)+")":"")).join(" · ")}</div>
+    </div></div>`;
+  } else {
+    html += `<div class="verdict warn"><div class="icon">!</div><div>
+      <div class="big">Nada combina claramente</div>
+      <div class="sub">Prueba con una prenda neutra (negro, blanco, gris, beige, azul marino).</div>
+    </div></div>`;
+  }
+  html += `<div class="setline">Todas las prendas, de la que mejor queda a la que menos:</div>`;
+  ranked.forEach(r=>{
+    html += `<div class="pair">
+      <span class="dots">${miniDots(r.o)}</span>
+      <span class="txt"><strong>${escapeHtml(r.o.color)}</strong> <span class="muted">${escapeHtml(r.o.cat.toLowerCase())}${r.o.name?" · "+escapeHtml(r.o.name):""}</span><br><span class="muted">${r.h.why}</span></span>
+      <span class="tag ${r.h.cls}">${tagIcon(r.h.cls)} ${r.h.label}</span>
+    </div>`;
+  });
+  showResult(html, scroll);
+}
+
+function showResult(html, scroll){
+  $("result").innerHTML = html;
+  $("result-card").classList.remove("hidden");
+  if(scroll) $("result-card").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+render();
+</script>
+</body>
+</html>
