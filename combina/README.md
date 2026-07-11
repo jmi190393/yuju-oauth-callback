@@ -29,10 +29,27 @@ borde.
 Cada prenda siempre muestra el **nombre del color por escrito**, que es lo que no
 se puede percibir a simple vista.
 
+- **Si no reconozco bien el color:** cuando la foto es ambigua (estampado, poca
+  luz, fondo con color) te aviso y te pido otra foto, en vez de arriesgar un
+  color equivocado.
+- **Asesor con IA (opcional):** con tu propia clave de API de Anthropic, la IA
+  analiza las fotos y da consejo de estilo más rico (color, formalidad, ocasión,
+  estampados). Toca **🧠 IA** para pegar tu clave (se guarda solo en el
+  dispositivo) y elegir el modelo.
+
 ## Cómo usarla
 
 Es un solo archivo, sin dependencias ni build. Abre `index.html` en el navegador,
 o publícalo con GitHub Pages y ábrelo desde el teléfono.
+
+### Sobre el modo IA
+
+El análisis con IA hace una llamada a la API de Anthropic desde el navegador, así
+que **solo funciona cuando la app corre en una página real** (GitHub Pages o el
+archivo abierto localmente), no dentro de una vista previa que bloquee la red.
+Necesita una clave de API (de `console.anthropic.com`), tiene un pequeño costo por
+uso y requiere conexión a internet. Todo lo demás (detección y nombres de color,
+armado de conjunto) funciona sin IA, sin conexión y sin costo.
 
 ## Cómo funciona por dentro
 

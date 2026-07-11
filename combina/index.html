@@ -138,8 +138,30 @@
       <div class="logo" aria-hidden="true"></div>
       <div class="wordmark">Combina<small>Asesor de imagen para daltónicos</small></div>
     </div>
-    <button class="theme-btn" id="theme-btn" type="button">🌗 Tema</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+      <button class="theme-btn" id="ai-settings-btn" type="button">🧠 IA</button>
+      <button class="theme-btn" id="theme-btn" type="button">🌗 Tema</button>
+    </div>
   </header>
+
+  <!-- Ajustes de IA -->
+  <section class="card hidden" id="ai-settings">
+    <h2>🧠 Asesor con IA (opcional)</h2>
+    <p class="lead">Con una clave de API de Anthropic, la IA analiza tus fotos y te da consejo de estilo más rico (color, formalidad, ocasión, estampados). Tu clave se guarda <strong>solo en este dispositivo</strong>.</p>
+    <label class="field" for="ai-key">Clave de API (empieza con sk-ant-…)</label>
+    <input type="text" id="ai-key" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+    <label class="field" for="ai-model">Modelo</label>
+    <select id="ai-model">
+      <option value="claude-opus-4-8">Claude Opus 4.8 (más capaz)</option>
+      <option value="claude-sonnet-5">Claude Sonnet 5 (equilibrado, más barato)</option>
+      <option value="claude-haiku-4-5">Claude Haiku 4.5 (más rápido y barato)</option>
+    </select>
+    <div class="actions">
+      <button class="primary" id="ai-save" type="button">Guardar</button>
+      <button class="ghost" id="ai-close" type="button">Cerrar</button>
+    </div>
+    <p class="lead" style="margin-top:14px;">Obtén tu clave en <strong>console.anthropic.com</strong> → API Keys. Nota: el análisis con IA tiene un pequeño costo por uso y necesita conexión a internet.</p>
+  </section>
 
   <section class="card">
     <h2><span class="step">1</span> Agregar una prenda</h2>
@@ -152,6 +174,20 @@
 
     <div id="add-fields" class="hidden">
       <img id="preview" alt="Vista previa de la prenda" style="width:100%;max-height:260px;object-fit:contain;border-radius:12px;margin-top:14px;background:var(--surface-2);">
+
+      <div id="uncertain" class="verdict warn hidden" style="margin-top:14px;">
+        <div class="icon">!</div>
+        <div>
+          <div class="big">No estoy seguro del color</div>
+          <div class="sub">Suele pasar con estampados, poca luz o fondo con color. Toma otra foto: <strong>buena luz</strong>, <strong>fondo liso claro</strong> y que la prenda <strong>llene el cuadro</strong>.</div>
+          <div class="actions">
+            <button class="primary" id="retake-btn" type="button">📷 Tomar otra foto</button>
+            <button class="ghost" id="usealways-btn" type="button">Usar de todos modos</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="ok-fields">
       <div class="row" style="margin-top:12px;">
         <div>
           <label class="field" for="cat">Tipo de prenda</label>
@@ -175,12 +211,13 @@
         <button class="primary" id="save-btn" type="button">Guardar en mi ropero</button>
         <button class="ghost" id="cancel-btn" type="button">Cancelar</button>
       </div>
+      </div><!-- /ok-fields -->
     </div>
   </section>
 
   <section class="card">
     <h2><span class="step">2</span> Mi ropero <span id="closet-count" style="color:var(--ink-soft);font-weight:500;font-size:13px;"></span></h2>
-    <p class="lead">Toca <strong>1 prenda</strong> y te digo qué le queda. Toca <strong>2 o más</strong> para evaluar el conjunto completo.</p>
+    <p class="lead">Toca una prenda y te muestro con qué armar el look. Al elegir la siguiente, solo te recomiendo lo que <strong>falta</strong> y combina con <strong>todo</strong> lo elegido.</p>
     <div class="empty" id="closet-empty">Aún no has agregado ropa. Empieza arriba 👆</div>
     <div class="grid" id="closet"></div>
   </section>
@@ -188,6 +225,10 @@
   <section class="card hidden" id="result-card">
     <h2><span class="step">3</span> Resultado</h2>
     <div id="result"></div>
+    <div id="ai-actions" class="hidden" style="margin-top:14px;">
+      <button class="ghost" id="ai-ask" type="button">🧠 Pedir opinión al asesor IA</button>
+      <div id="ai-out" style="margin-top:12px;"></div>
+    </div>
   </section>
 
   <p class="foot">
@@ -200,7 +241,7 @@
 <div class="selbar hidden" id="selbar">
   <div class="inner">
     <span class="count" id="selcount">0 seleccionadas</span>
-    <button class="primary" id="eval-btn" type="button">Evaluar conjunto</button>
+    <button class="ghost" id="clear-btn" type="button">Limpiar</button>
   </div>
 </div>
 
@@ -318,7 +359,17 @@ function dominantColor(img){
   for(const k in buckets){ const bk=buckets[k]; total+=bk.w; if(!best||bk.w>best.w) best=bk; }
   if(!best||best.w===0) return null;
   const r=Math.round(best.r/best.w), g=Math.round(best.g/best.w), b=Math.round(best.b/best.w);
-  return {rgb:[r,g,b], conf: total ? best.w/total : 0};
+  // Confianza = qué tanto de la prenda es realmente de ese color (cobertura).
+  // Baja con estampados, poca luz o fondo con color -> conviene pedir otra foto.
+  let closeN=0, nPix=0;
+  for(let i=0;i<data.length;i+=4){
+    if(data[i+3]<125) continue;
+    nPix++;
+    const dr=data[i]-r, dg=data[i+1]-g, db=data[i+2]-b;
+    if(Math.sqrt(dr*dr+dg*dg+db*db) < 55) closeN++;
+  }
+  const conf = nPix ? closeN/nPix : 0;
+  return {rgb:[r,g,b], conf};
 }
 
 function toSmallDataURL(img, max=420){
@@ -358,9 +409,13 @@ function handleFile(file){
       pending = { dataUrl, rgb, name:meta.name, neutral:meta.neutral, h:meta.h, s:meta.s, l:meta.l };
       $("preview").src = dataUrl;
       buildColorSelect(meta.name);
-      $("conf").textContent = det ? "· revisa que sea correcto" : "· elígelo a mano";
+      $("conf").textContent = "· revisa que sea correcto";
       $("name").value = "";
       $("cat").selectedIndex = 0;
+      // ¿Pude definir el color con confianza? Si no, pido otra foto.
+      const sure = det && det.conf >= 0.45;
+      $("uncertain").classList.toggle("hidden", sure);
+      $("ok-fields").classList.toggle("hidden", !sure);
       $("add-fields").classList.remove("hidden");
       $("add-fields").scrollIntoView({behavior:"smooth", block:"nearest"});
     };
@@ -384,6 +439,12 @@ function buildColorSelect(selectedName){
 
 $("cancel-btn").addEventListener("click", resetAdd);
 function resetAdd(){ pending=null; $("add-fields").classList.add("hidden"); $("file-input").value=""; }
+
+$("retake-btn").addEventListener("click", ()=>{ $("file-input").value=""; $("file-input").click(); });
+$("usealways-btn").addEventListener("click", ()=>{
+  $("uncertain").classList.add("hidden");
+  $("ok-fields").classList.remove("hidden");
+});
 
 $("save-btn").addEventListener("click", ()=>{
   if(!pending) return;
@@ -430,15 +491,10 @@ function escapeHtml(s){ return (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"
 function updateSelbar(){
   const n=selected.size;
   $("selbar").classList.toggle("hidden", n===0);
-  $("eval-btn").disabled = n<2;
-  if(n===1){
-    $("selcount").textContent = "1 prenda — abajo te digo qué le queda";
-    renderMatch(selItems()[0], false);       // al elegir 1 prenda: automático
-  } else if(n>=2){
-    $("selcount").textContent = n+" seleccionadas — toca «Evaluar conjunto»";
-    $("result-card").classList.add("hidden"); // el resultado anterior queda obsoleto
+  if(n>=1){
+    $("selcount").textContent = n===1 ? "1 prenda elegida" : n+" prendas en el conjunto";
+    renderOutfit(false);   // arma el look automáticamente al elegir
   } else {
-    $("selcount").textContent = "0 seleccionadas";
     $("result-card").classList.add("hidden");
   }
 }
@@ -471,70 +527,183 @@ function tagIcon(cls){ return cls==="ok"?"✓":cls==="warn"?"!":"✕"; }
 function selItems(){ return closet.filter(c=>selected.has(c.id)); }
 function miniDots(item){ return `<span class="mini" style="background:rgb(${item.rgb.join(",")})"></span>`; }
 
-$("eval-btn").addEventListener("click", ()=>{
-  const items = selItems();
-  if(items.length<2) return;
-  const pairs=[]; let sum=0, worst=100;
-  for(let i=0;i<items.length;i++) for(let j=i+1;j<items.length;j++){
-    const h=harmony(items[i],items[j]);
-    pairs.push({a:items[i],b:items[j],h});
-    sum+=h.score; worst=Math.min(worst,h.score);
-  }
-  const overall = Math.round((sum/pairs.length)*0.6 + worst*0.4);
-  const v = verdictFromScore(overall);
-  let html = `<div class="verdict ${v.cls}"><div class="icon">${v.icon}</div><div><div class="big">${v.big}</div><div class="sub">${v.tip}</div></div></div>`;
-  html += `<div class="setline">Prendas: ${items.map(i=>escapeHtml(i.color)).join(" + ")}</div>`;
-  pairs.sort((x,y)=>x.h.score-y.h.score);
-  pairs.forEach(p=>{
-    html += `<div class="pair">
-      <span class="dots">${miniDots(p.a)}${miniDots(p.b)}</span>
-      <span class="txt"><strong>${escapeHtml(p.a.color)}</strong> + <strong>${escapeHtml(p.b.color)}</strong><br><span class="muted">${p.h.why}</span></span>
-      <span class="tag ${p.h.cls}">${tagIcon(p.h.cls)} ${p.h.label}</span>
-    </div>`;
-  });
-  showResult(html, true);
-});
+$("clear-btn").addEventListener("click", ()=>{ selected.clear(); render(); });
 
-function renderMatch(base, scroll){
-  if(!base) return;
-  const others = closet.filter(c=>c.id!==base.id);
-  let html = `<div style="display:flex;align-items:center;gap:9px;margin-bottom:14px;font-size:15px;">
-      <span class="swatch" style="width:21px;height:21px;background:rgb(${base.rgb.join(",")})"></span>
-      Con <strong style="margin:0 2px;">${escapeHtml(base.color)}</strong>${base.name?` · ${escapeHtml(base.name)}`:""}
-    </div>`;
-  if(!others.length){
-    html += `<div class="empty">Agrega más prendas al ropero para ver con qué combina.</div>`;
-    showResult(html, scroll); return;
+/* Mapa de categorías -> huecos del conjunto */
+const SLOT_OF = {
+  "Parte de arriba":"arriba", "Parte de abajo":"abajo",
+  "Vestido/Traje":"cuerpo", "Abrigo":"abrigo", "Zapatos":"zapatos", "Accesorio":"accesorio"
+};
+const SLOT_LABEL = {
+  arriba:"Parte de arriba", abajo:"Parte de abajo", cuerpo:"Vestido o traje",
+  zapatos:"Zapatos", abrigo:"Abrigo o chamarra", accesorio:"Accesorio"
+};
+const SLOT_ORDER = ["cuerpo","arriba","abajo","zapatos","abrigo","accesorio"];
+
+/* Compatibilidad de un candidato con TODAS las prendas ya elegidas (manda el peor par) */
+function combinedHarmony(cand, chosen){
+  let worst=null;
+  for(const c of chosen){
+    const h=harmony(cand,c);
+    if(!worst || h.score<worst.score) worst=h;
   }
-  const ranked = others.map(o=>({o, h:harmony(base,o)})).sort((x,y)=>y.h.score-x.h.score);
-  const good = ranked.filter(r=>r.h.cls==="ok");
-  // Resumen claro: qué queda y se ve bien
-  if(good.length){
-    html += `<div class="verdict ok"><div class="icon">✓</div><div>
-      <div class="big">Queda bien con:</div>
-      <div class="sub">${good.map(r=>escapeHtml(r.o.color)+(r.o.name?" ("+escapeHtml(r.o.name)+")":"")).join(" · ")}</div>
-    </div></div>`;
-  } else {
-    html += `<div class="verdict warn"><div class="icon">!</div><div>
-      <div class="big">Nada combina claramente</div>
-      <div class="sub">Prueba con una prenda neutra (negro, blanco, gris, beige, azul marino).</div>
-    </div></div>`;
-  }
-  html += `<div class="setline">Todas las prendas, de la que mejor queda a la que menos:</div>`;
-  ranked.forEach(r=>{
-    html += `<div class="pair">
-      <span class="dots">${miniDots(r.o)}</span>
-      <span class="txt"><strong>${escapeHtml(r.o.color)}</strong> <span class="muted">${escapeHtml(r.o.cat.toLowerCase())}${r.o.name?" · "+escapeHtml(r.o.name):""}</span><br><span class="muted">${r.h.why}</span></span>
-      <span class="tag ${r.h.cls}">${tagIcon(r.h.cls)} ${r.h.label}</span>
-    </div>`;
+  return worst || {score:80, cls:"ok", label:"Combina", why:""};
+}
+
+function renderOutfit(scroll){
+  const chosen = selItems();
+  if(!chosen.length){ $("result-card").classList.add("hidden"); return; }
+
+  // Huecos ya cubiertos por lo elegido (un vestido/traje cubre arriba y abajo)
+  const filled = new Set();
+  chosen.forEach(c=>{
+    const slot = SLOT_OF[c.cat];
+    if(slot==="cuerpo"){ filled.add("arriba"); filled.add("abajo"); filled.add("cuerpo"); }
+    else if(slot!=="accesorio") filled.add(slot);
   });
+
+  let html = `<div style="margin-bottom:12px;font-size:15px;font-weight:700;">Tu conjunto</div>`;
+  html += `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">`;
+  chosen.forEach(c=>{
+    html += `<span class="tag ok" style="border-color:var(--line);color:var(--ink);background:var(--surface-2);">
+      <span class="mini" style="width:14px;height:14px;background:rgb(${c.rgb.join(",")})"></span>
+      ${escapeHtml(c.color)}<span class="muted" style="font-weight:500;"> · ${escapeHtml(c.cat.toLowerCase())}</span></span>`;
+  });
+  html += `</div>`;
+
+  // Veredicto del conjunto elegido (si hay 2+)
+  if(chosen.length>=2){
+    let sum=0, worst=100, pairs=[];
+    for(let i=0;i<chosen.length;i++) for(let j=i+1;j<chosen.length;j++){
+      const h=harmony(chosen[i],chosen[j]); pairs.push({a:chosen[i],b:chosen[j],h});
+      sum+=h.score; worst=Math.min(worst,h.score);
+    }
+    const overall=Math.round((sum/pairs.length)*0.6+worst*0.4);
+    const v=verdictFromScore(overall);
+    html += `<div class="verdict ${v.cls}"><div class="icon">${v.icon}</div><div><div class="big">${v.big}</div><div class="sub">${v.tip}</div></div></div>`;
+    pairs.sort((x,y)=>x.h.score-y.h.score);
+    if(pairs[0].h.cls!=="ok"){ // solo señalo el par flojo
+      const p=pairs[0];
+      html += `<div class="pair"><span class="dots">${miniDots(p.a)}${miniDots(p.b)}</span>
+        <span class="txt"><strong>${escapeHtml(p.a.color)}</strong> + <strong>${escapeHtml(p.b.color)}</strong><br><span class="muted">${p.h.why}</span></span>
+        <span class="tag ${p.h.cls}">${tagIcon(p.h.cls)} ${p.h.label}</span></div>`;
+    }
+  }
+
+  // Huecos que faltan por llenar
+  let slots = SLOT_ORDER.filter(s=>{
+    if(s==="accesorio") return true;               // accesorios: siempre opcional
+    if(s==="cuerpo") return !filled.has("arriba") && !filled.has("abajo"); // solo si no hay arriba/abajo
+    return !filled.has(s);
+  });
+
+  html += `<div class="setline" style="margin-top:14px;">Para completar el look, elige de esto (solo te muestro lo que combina con todo):</div>`;
+
+  let anyRec=false;
+  slots.forEach(slot=>{
+    const cands = closet.filter(c=> !selected.has(c.id) && SLOT_OF[c.cat]===slot);
+    const ranked = cands.map(c=>({c, h:combinedHarmony(c, chosen)}))
+                        .filter(r=>r.h.score>=52)
+                        .sort((x,y)=>y.h.score-x.h.score);
+    if(!ranked.length) return;
+    anyRec=true;
+    html += `<div style="margin-top:12px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:700;">${SLOT_LABEL[slot]}</div>`;
+    ranked.forEach(r=>{
+      html += `<div class="pair">
+        <span class="dots">${miniDots(r.c)}</span>
+        <span class="txt"><strong>${escapeHtml(r.c.color)}</strong>${r.c.name?` <span class="muted">· ${escapeHtml(r.c.name)}</span>`:""}<br><span class="muted">${r.h.why}</span></span>
+        <span class="tag ${r.h.cls}">${tagIcon(r.h.cls)} ${r.h.label}</span>
+      </div>`;
+    });
+  });
+
+  if(!anyRec){
+    html += `<div class="empty">No tengo prendas que combinen para completar el look. Agrega más ropa (una prenda neutra ayuda mucho).</div>`;
+  }
+
   showResult(html, scroll);
 }
 
 function showResult(html, scroll){
   $("result").innerHTML = html;
   $("result-card").classList.remove("hidden");
+  $("ai-actions").classList.toggle("hidden", selected.size<1);
+  $("ai-out").innerHTML = "";
   if(scroll) $("result-card").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* ---------- Asesor con IA (opcional) ---------- */
+const AI_KEY_STORE = "combina.ai.key", AI_MODEL_STORE = "combina.ai.model";
+function aiKey(){ return localStorage.getItem(AI_KEY_STORE) || ""; }
+function aiModel(){ return localStorage.getItem(AI_MODEL_STORE) || "claude-opus-4-8"; }
+
+$("ai-settings-btn").addEventListener("click", ()=>{
+  $("ai-key").value = aiKey();
+  $("ai-model").value = aiModel();
+  $("ai-settings").classList.toggle("hidden");
+  if(!$("ai-settings").classList.contains("hidden")) $("ai-settings").scrollIntoView({behavior:"smooth", block:"start"});
+});
+$("ai-close").addEventListener("click", ()=> $("ai-settings").classList.add("hidden"));
+$("ai-save").addEventListener("click", ()=>{
+  localStorage.setItem(AI_KEY_STORE, $("ai-key").value.trim());
+  localStorage.setItem(AI_MODEL_STORE, $("ai-model").value);
+  $("ai-settings").classList.add("hidden");
+});
+
+$("ai-ask").addEventListener("click", askAI);
+
+async function askAI(){
+  const items = selItems();
+  if(!items.length) return;
+  if(!aiKey()){
+    $("ai-out").innerHTML = `<div class="verdict warn"><div class="icon">!</div><div><div class="big">Falta tu clave de IA</div><div class="sub">Toca «🧠 IA» arriba para pegar tu clave de API. Es opcional.</div></div></div>`;
+    $("ai-settings-btn").click();
+    return;
+  }
+  $("ai-ask").disabled = true;
+  $("ai-out").innerHTML = `<div class="setline">Consultando al asesor de imagen… ✨</div>`;
+
+  // Arma el contenido: cada foto + su color detectado y tipo, luego la pregunta
+  const content = [];
+  items.forEach((it,idx)=>{
+    const b64 = (it.img.split(",")[1]) || "";
+    content.push({type:"image", source:{type:"base64", media_type:"image/jpeg", data:b64}});
+    content.push({type:"text", text:`Prenda ${idx+1}: ${it.cat}. Color que detecté: ${it.color}.${it.name?" Nombre: "+it.name+".":""}`});
+  });
+  content.push({type:"text", text:
+    "Actúa como mi consultor de imagen personal. Soy DALTÓNICO (rojo-verde), así que NO puedo fiarme de ver los colores: dime siempre el nombre del color por escrito. "+
+    (items.length===1
+      ? "Con esta prenda: dime de qué color es realmente, con qué colores y tipos de prenda combina bien, y con cuáles no. "
+      : "Evalúa este conjunto: ¿se ve bien junto o no? Explica por qué y qué cambiar. ")+
+    "Comenta también formalidad, ocasión adecuada y estampados si los hay. Responde en español, claro y breve, con viñetas."});
+
+  try{
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        "x-api-key": aiKey(),
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
+      body: JSON.stringify({ model: aiModel(), max_tokens: 1024, messages:[{role:"user", content}] })
+    });
+    if(!resp.ok){
+      let msg = "Error "+resp.status;
+      try{ const e=await resp.json(); if(e.error && e.error.message) msg=e.error.message; }catch(_){}
+      throw new Error(msg);
+    }
+    const data = await resp.json();
+    const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+    $("ai-out").innerHTML = `<div class="verdict ok" style="display:block;"><div class="big" style="margin-bottom:6px;">🧠 Asesor de imagen</div><div class="sub" style="white-space:pre-wrap;">${escapeHtml(text)||"(sin respuesta)"}</div></div>`;
+  }catch(err){
+    const hint = /Failed to fetch|NetworkError|blocked|CSP/i.test(err.message)
+      ? "Parece que estás en la vista previa de claude.ai, que bloquea las llamadas a internet. Abre esta app publicada con GitHub Pages (o el archivo en tu compu) para usar la IA."
+      : escapeHtml(err.message);
+    $("ai-out").innerHTML = `<div class="verdict bad"><div class="icon">✕</div><div><div class="big">No se pudo consultar la IA</div><div class="sub">${hint}</div></div></div>`;
+  }finally{
+    $("ai-ask").disabled = false;
+  }
 }
 
 render();
