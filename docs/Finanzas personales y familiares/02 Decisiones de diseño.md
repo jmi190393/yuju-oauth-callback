@@ -28,7 +28,12 @@ Ingreso del mes
 - El sistema **avisará qué día descargar** cada estado (después de cada corte).
 - Documentos a subir cada mes: BBVA, Amex Gold, Amex Platinum, Revolut, Banamex (hasta cancelar), y mensual/trimestral: GBM, eToro, Cetes Directo.
 
-## Captura por WhatsApp (pregunta 32) — Sí, fase 2
+## Tarjetas de la pareja — decidido ✅
+- **Amex Gold**: tarjeta única del día a día (donde ya viven las suscripciones).
+- **Revolut crédito**: solo en viajes fuera de México (mejor tipo de cambio). El sistema etiqueta automáticamente su gasto como `viaje 🌎`.
+- El gasto sale de la cuenta BBVA de él; la esposa tiene acceso completo al sistema, sus cuentas propias quedan fuera por ahora.
+
+## Captura por WhatsApp (pregunta 32) — Sí, fase 2 — decidido: WhatsApp ✅
 - **Texto**: "250 súper", "1,200 gasolina" → se registra solo.
 - **Foto del ticket**: el sistema extrae comercio, monto, fecha y folio; si no puede, **pregunta** ("¿qué comercio es y a qué corresponde?").
 - El mismo ticket alimenta el módulo de **facturación**.

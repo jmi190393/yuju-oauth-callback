@@ -18,6 +18,6 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 | Fase | Estado |
 |---|---|
 | Cuestionario | ✅ Completo (2026-07-19) |
-| Decisiones de diseño | 🔶 En revisión final |
+| Decisiones de diseño | ✅ Cerradas (2026-07-19) |
 | Estados de cuenta | ⏳ Pendiente de subir |
-| Construcción MVP | ⏸ No iniciada |
+| Construcción MVP | ⏸ Lista para iniciar |
