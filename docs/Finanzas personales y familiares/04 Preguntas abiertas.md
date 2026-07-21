@@ -20,14 +20,14 @@
 - [ ] 🔁 Orden de pago al extranjero $35,264.60 (28/ene) — preguntó "¿de qué tarjeta?" → **aclarar**: no fue tarjeta, fue una ORDEN DE PAGO INTERNACIONAL enviada desde su cuenta de débito BBVA
 - [ ] 🔁 Pagos $8,957.06 (feb) y $4,616.80 (abr) — preguntó "¿qué tarjeta?" → **aclarar**: no son tarjeta, son SPEIs desde BBVA de vuelta a la cuenta bancaria de donde le llega la nómina (¿empresa familiar?)
 - [x] ~~$3,490 a José Luis Aparicio~~ ✅ (21/jul): compra de producto → categoría compras. Pendiente sub-pregunta: los $2,895 ×2 de enero no los respondió
-- [ ] ¿Reconoces **FANFIX.IO $198.09 USD** (20/ene, débito BBVA)? Cargo tipo suscripción.
-- [ ] ¿Quién paga los **$160/mes** (venta a 36 mensualidades, va 29/36 — Impulso Emprendimientos / World Wide Tech Ventures)?
-- [ ] El mantenimiento "Serena 506" varió: $15,477 (ene) → $21,798.61 (feb–jun) → $17,798.61 (jul). ¿Por qué?
-- [ ] ¿Qué servicio da Enrique Cruz Segura ($2,320/mes)?
+- [x] ~~FANFIX.IO $198.09 USD~~ ✅ (21/jul): pago de una sola vez, no recurrente → no vigilar como suscripción
+- [x] ~~¿Quién paga los $160/mes?~~ ✅ (21/jul): retorno de una **inversión en Wortev Capital** (36 mensualidades, va 29/36) → registrar como ingreso de inversión
+- [x] ~~Variación mantenimiento "Serena 506"~~ ✅ (21/jul): cuota extraordinaria → base fija $21,798.61 con extraordinarias ocasionales
+- [x] ~~¿Enrique Cruz Segura $2,320/mes?~~ ✅ (21/jul): es el **contador** → categoría servicios profesionales/fiscal
 
 ### Del análisis Revolut
 - [x] ~~¿$270,000 a Banorte el 26/feb?~~ ✅ (21/jul): pago de una deuda que tenía con su suegro (un mueble) → categoría pago de deuda familiar, no recurrente
-- [ ] ¿La tarjeta adicional ****0870 es de Nurit?
+- [x] ~~¿La tarjeta adicional ****0870 es de Nurit?~~ ✅ (21/jul): NO — es del propio Jaime, la virtual del wallet (Apple/Google Pay). Todo el gasto Revolut es de él
 - [ ] Claude $3,477.96 (abr): ¿plan anual o mensual? · Nutrafol $3,576.87: ¿suscripción recurrente? · OpenAI $110/mes cesó en marzo: ¿cancelada?
 - [x] ~~¿El pico de $73,886 en Amex B (jun)?~~ ✅ resuelto: mensualidades del MSI automático Bupa+KLM en Platinum; el fijo $9,289.34 eran mensualidades de planes MSI previos
 - [x] ~~¿Cuánto hay HOY en eToro, GBM y Cetes?~~ ✅ resuelto con estados: eToro USD $86,713 · GBM+ USD $10,609 · Cetes $56,277
@@ -35,12 +35,12 @@
 
 ### Del análisis Amex
 - [ ] ⚠️ **Bupa dos veces en 5 meses**: ene $103,509+$36,254 (Gold) y may/jun $102,421+$35,167 (Platinum). ¿Son dos pólizas (tuya y de Nurit)? ¿Renovación adelantada? ¿Se duplicó algo?
-- [ ] ¿Qué es **"TIENDA COM MEX E COMMER"**? ($37,506 en 25 cargos, todos los meses)
-- [ ] ¿Qué es **H2OSYS / Soluciones en Agua MAIM**? ($9,261.57 ×2 + $517/mes — ¿sistema de agua de la casa?)
+- [x] ~~"TIENDA COM MEX E COMMER"~~ ✅ (21/jul): es **La Comer** (súper) → $37,506/7 meses ≈ $5,400/mes de supermercado adicional a Costco/Walmart
+- [x] ~~H2OSYS / Soluciones en Agua MAIM~~ ✅ (21/jul): sí, sistema de agua de la casa → categoría casa/mantenimiento ($517/mes recurrente)
 - [ ] ¿Dónde se cobran **Netflix/Spotify/Disney/Amazon Prime/Obsidian**? No aparecen en ninguna de las 4 tarjetas analizadas.
 - [ ] Apple.com/Bill: 23 microcargos ($49–$399). ¿Qué suscripciones Apple tienen activas? (¿iCloud, Apple One, apps?)
 - [ ] KLM $12,112 (8 cargos en may) + pagaste ETA UK: ¿viaje a Europa próximo? ¿presupuesto?
-- [ ] ¿"MERCADOPAGO*OPTICASLUX" $12,080 a 6 MSI (abr) — lentes?
+- [x] ~~MERCADOPAGO*OPTICASLUX $12,080 a 6 MSI~~ ✅ (21/jul): compra de lentes → categoría salud/óptica
 
 ### Del análisis GBM e inversiones
 - [x] ~~Contrato GBM en $0~~ ✅ resuelto: el dinero vive en GBM+ internacional (los $100k se convirtieron en USD $5,776.17 el mismo día)
