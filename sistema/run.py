@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Arranque local/producción: python run.py (o uvicorn app.main:app)."""
+"""Arranque local: python run.py"""
 import os
 
-import uvicorn
+from app.main import app
 
 if __name__ == "__main__":
-    uvicorn.run("app.main:app", host="0.0.0.0",
-                port=int(os.environ.get("PORT", 8000)),
-                reload=bool(os.environ.get("DEV")))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)),
+            debug=bool(os.environ.get("DEV")))

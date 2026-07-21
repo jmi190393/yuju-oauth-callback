@@ -1,15 +1,17 @@
-"""Login con sesión firmada en cookie. Dos usuarios (pareja), sin dependencias externas."""
+"""Login con sesión firmada en cookie. Dos usuarios (pareja), sin dependencias externas.
+
+Integración con Flask: current_user_id lee la cookie; login_required protege rutas.
+"""
 import base64
+import functools
 import hashlib
 import hmac
 import json
 import os
 import time
 
-from fastapi import Depends, HTTPException, Request
-from sqlalchemy.orm import Session
+from flask import g, jsonify, request
 
-from .db import get_db
 from .models import User
 
 SECRET = os.environ.get("FINANZAS_SECRET", "")
@@ -19,8 +21,11 @@ if not SECRET:
         SECRET = open(_SECRET_FILE).read().strip()
     else:
         SECRET = base64.urlsafe_b64encode(os.urandom(32)).decode()
-        with open(_SECRET_FILE, "w") as f:
-            f.write(SECRET)
+        try:
+            with open(_SECRET_FILE, "w") as f:
+                f.write(SECRET)
+        except OSError:
+            pass
 
 SESSION_DAYS = 30
 COOKIE = "finanzas_session"
@@ -61,12 +66,17 @@ def read_token(token: str) -> int | None:
         return None
 
 
-def current_user(request: Request, db: Session = Depends(get_db)) -> User:
-    token = request.cookies.get(COOKIE, "")
-    uid = read_token(token)
-    if uid is None:
-        raise HTTPException(status_code=401, detail="Sesión inválida — vuelve a iniciar sesión")
-    user = db.get(User, uid)
-    if not user:
-        raise HTTPException(status_code=401, detail="Usuario no encontrado")
-    return user
+def current_user_id() -> int | None:
+    return read_token(request.cookies.get(COOKIE, ""))
+
+
+def login_required(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        uid = current_user_id()
+        user = g.db.get(User, uid) if uid is not None else None
+        if user is None:
+            return jsonify({"detail": "Sesión inválida — vuelve a iniciar sesión"}), 401
+        g.user = user
+        return fn(*args, **kwargs)
+    return wrapper

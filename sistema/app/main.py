@@ -1,70 +1,55 @@
-"""Punto de entrada FastAPI. Sirve la API y la PWA estática.
+"""Punto de entrada Flask (WSGI puro — compatible con uWSGI de PythonAnywhere).
 
-Los archivos estáticos se entregan como bytes completos (no streaming async),
-para máxima compatibilidad con servidores WSGI como uWSGI de PythonAnywhere.
+Sirve la API (blueprint /api) y la PWA estática. Al importarse crea las tablas
+y siembra los datos iniciales una sola vez.
 """
 import os
 
-from fastapi import FastAPI, Response
-from fastapi.responses import HTMLResponse
+from flask import Flask, g, send_file
+from sqlalchemy.exc import SQLAlchemyError
 
-from .api import router
+from .api import bp
+from .auth import SESSION_DAYS  # noqa: F401 (asegura carga temprana del secreto)
 from .db import Base, SessionLocal, engine
+from .models import User  # noqa: F401
 from .seed import seed
 
 STATIC_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "static"))
 
-CONTENT_TYPES = {
-    ".html": "text/html; charset=utf-8",
-    ".css": "text/css; charset=utf-8",
-    ".js": "application/javascript; charset=utf-8",
-    ".svg": "image/svg+xml",
-    ".webmanifest": "application/manifest+json",
-    ".json": "application/json",
-    ".png": "image/png",
-    ".ico": "image/x-icon",
-}
+app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="/static")
+app.register_blueprint(bp)
 
-app = FastAPI(title="Finanzas personales y familiares", docs_url=None, redoc_url=None)
-app.include_router(router)
+# Inicialización (una vez por proceso): tablas + siembra.
+Base.metadata.create_all(engine)
+with SessionLocal() as _db:
+    seed(_db)
 
 
-def _read(name: str) -> bytes:
-    with open(os.path.join(STATIC_DIR, name), "rb") as f:
-        return f.read()
+@app.before_request
+def _open_db():
+    g.db = SessionLocal()
 
 
-def _serve(name: str) -> Response:
-    path = os.path.normpath(os.path.join(STATIC_DIR, name))
-    if not path.startswith(STATIC_DIR) or not os.path.isfile(path):
-        return HTMLResponse(_read("index.html"))
-    ext = os.path.splitext(path)[1]
-    return Response(content=open(path, "rb").read(),
-                    media_type=CONTENT_TYPES.get(ext, "application/octet-stream"))
+@app.teardown_request
+def _close_db(exc):
+    db = g.pop("db", None)
+    if db is not None:
+        if exc is not None and isinstance(exc, SQLAlchemyError):
+            db.rollback()
+        db.close()
 
 
-@app.on_event("startup")
-def startup():
-    Base.metadata.create_all(engine)
-    with SessionLocal() as db:
-        seed(db)
-
-
-@app.get("/static/{name:path}", include_in_schema=False)
-def static_files(name: str):
-    return _serve(name)
-
-
-@app.get("/manifest.webmanifest", include_in_schema=False)
+@app.get("/manifest.webmanifest")
 def manifest():
-    return _serve("manifest.webmanifest")
+    return send_file(os.path.join(STATIC_DIR, "manifest.webmanifest"))
 
 
-@app.get("/sw.js", include_in_schema=False)
+@app.get("/sw.js")
 def sw():
-    return _serve("sw.js")
+    return send_file(os.path.join(STATIC_DIR, "sw.js"))
 
 
-@app.get("/{path:path}", include_in_schema=False)
-def spa(path: str):
-    return HTMLResponse(_read("index.html"))
+@app.get("/")
+@app.get("/<path:path>")
+def spa(path=""):
+    return send_file(os.path.join(STATIC_DIR, "index.html"))
