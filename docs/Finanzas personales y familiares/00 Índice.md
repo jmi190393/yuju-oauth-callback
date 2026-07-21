@@ -12,6 +12,7 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 - [[03 Blueprint del sistema]] — Módulos, pantallas, fases de construcción.
 - [[04 Preguntas abiertas]] — Lo que falta por definir o entregar.
 - [[05 Benchmark de apps]] — Qué tomamos de las mejores apps del mercado.
+- [[06 Análisis BBVA 2026]] — Ingresos, destinos del dinero y recurrentes detectados (dic 2025 – jul 2026).
 
 ## Estado del proyecto
 
@@ -19,5 +20,5 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 |---|---|
 | Cuestionario | ✅ Completo (2026-07-19) |
 | Decisiones de diseño | ✅ Cerradas (2026-07-19) |
-| Estados de cuenta | ⏳ Pendiente de subir |
+| Estados de cuenta | 🔶 BBVA ✅ analizado · faltan Amex ×2, Revolut, Banamex, inversiones |
 | Construcción MVP | ⏸ Lista para iniciar |
