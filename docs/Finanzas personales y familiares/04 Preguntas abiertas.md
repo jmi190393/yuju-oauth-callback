@@ -53,7 +53,8 @@
 - [x] ~~Amex Gold y Platinum~~ ✅ 10 estados analizados (ene–jul)
 - [ ] Banamex (si tiene actividad; está por cancelarse)
 - [x] ~~Cetes Directo~~ ✅ ene–jun analizados ($56,277 al 30/jun)
-- [ ] eToro y GBM (último estado o captura de saldo actual basta, para patrimonio)
+- [x] ~~eToro~~ ✅ reporte ene–jul analizado (USD $86,713 al 19/jul)
+- [ ] GBM (último estado o captura de saldo actual basta, para patrimonio)
 
 > [!tip] Al subir estados de cuenta
 > Tachar/ocultar número completo de tarjeta y CLABE. Lo necesario es: comercios, fechas y montos.

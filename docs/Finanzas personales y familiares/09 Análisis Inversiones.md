@@ -22,8 +22,13 @@ Contrato CLABE 135…9895. Aportación **domiciliada de $2,000/mes** (día ~1, v
 ## Revolut "MXN Inversión" ✅ (ver [[07 Análisis Revolut 2026]])
 - Saldo al 30/jun: **$237,762.85** · interés ~$44/día neto (~8.9% anual) · liquidez inmediata.
 
-## eToro ⏳
-- Entradas 2026 detectadas (desde Revolut): **$149,990** (6 y 8 de mayo). Valor actual: pendiente.
+## eToro ✅ (reporte 1/ene – 19/jul 2026, cuenta en USD)
+- **Valor de la cuenta al 19/jul: USD $86,713.24** (capital no realizado final) ≈ **$1.6M MXN** (aprox.; el sistema usará tipo de cambio vivo).
+- Depósitos 2026: USD $9,081.85 — cuadra con los $149,990 MXN enviados desde Revolut en mayo ✅.
+- **Ganancia realizada 2026: +USD $28,822.53** (ETFs +24,137 · acciones +3,819 · CFDs +1,326 · cripto −460) + dividendos $92.72.
+- Comisiones del periodo: ~USD −961 (nocturnas, operación, conversión FX).
+- Portafolio: concentrado en **TQQQ (Nasdaq ×3 apalancado)** y NVDA, con posiciones también en AAPL, MSFT, AMAT, GOOGL, META, TSMC, BABA, LRCX, CRM. Hubo una venta masiva el 9/jun y operaciones CFD grandes (hasta USD $90k) en junio. Perfil de riesgo ALTO — relevante para el módulo de patrimonio (volatilidad esperada).
+- Nota: capital realizado final USD $94,917.80 > no realizado USD $86,713.24 → las posiciones abiertas cargan minusvalía latente de ~USD $8.2k.
 
 ## GBM ⏳
 - Entrada 2026 detectada (desde Revolut): **$100,000**. Valor actual: pendiente.
@@ -32,8 +37,9 @@ Contrato CLABE 135…9895. Aportación **domiciliada de $2,000/mes** (día ~1, v
 ## Foto preliminar del patrimonio líquido/invertido (con lo confirmado)
 | Institución | Valor | Fecha del dato |
 |---|---|---|
+| eToro | USD $86,713 ≈ **$1,600,000 MXN** (aprox.) | 19/jul/2026 |
 | Revolut MXN Inversión | $237,763 | 30/jun/2026 |
 | Cetes Directo | $56,277 | 30/jun/2026 |
 | BBVA (cuenta eje) | $6,496 | 14/jul/2026 |
-| eToro / GBM | pendiente | — |
-| **Total confirmado** | **≈ $300,536** | + eToro y GBM por sumar |
+| GBM | pendiente | — |
+| **Total confirmado** | **≈ $1.9M MXN** (aprox. por FX) | + GBM por sumar |
