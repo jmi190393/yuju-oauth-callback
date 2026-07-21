@@ -19,7 +19,7 @@ from .models import (Account, Category, Goal, ImportBatch, MsiPlan, Provision,
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
-APP_VERSION = "1.1"
+APP_VERSION = "1.2"
 GASTO_KINDS = ("fijo", "variable", "aprovisionamiento")
 
 
@@ -203,6 +203,57 @@ def patch_category(cat_id):
     c.monthly_budget = body().get("monthly_budget")
     db().commit()
     return jsonify({"ok": True})
+
+
+@bp.post("/categories")
+@login_required
+def create_category():
+    """Crea una categoría nueva sobre la marcha (ej. desde 'Por catalogar')."""
+    name = (body().get("name") or "").strip()
+    if not name:
+        return err("Escribe un nombre de categoría")
+    existing = db().query(Category).filter(func.lower(Category.name) == name.lower()).first()
+    if existing:
+        return jsonify({"id": existing.id, "name": existing.name,
+                        "emoji": existing.emoji, "created": False})
+    c = Category(name=name, emoji=body().get("emoji", "🏷️"),
+                 kind=body().get("kind", "variable"),
+                 monthly_budget=body().get("monthly_budget"), sort=50)
+    db().add(c)
+    db().commit()
+    return jsonify({"id": c.id, "name": c.name, "emoji": c.emoji, "created": True})
+
+
+@bp.delete("/categories/<int:cat_id>")
+@login_required
+def delete_category(cat_id):
+    c = db().get(Category, cat_id)
+    if not c:
+        return err("Categoría no encontrada", 404)
+    if db().query(Transaction.id).filter(Transaction.category_id == cat_id).first():
+        return err("No se puede borrar: tiene movimientos asignados")
+    db().query(Rule).filter(Rule.category_id == cat_id).delete()
+    db().delete(c)
+    db().commit()
+    return jsonify({"ok": True})
+
+
+@bp.post("/categories/cleanup")
+@login_required
+def cleanup_categories():
+    """Elimina las categorías que no se usaron (0 movimientos), salvo las de
+    ingreso/transferencia/inversión (estructurales)."""
+    protected = ("ingreso", "transferencia", "inversion")
+    used = {cid for (cid,) in db().query(Transaction.category_id)
+            .filter(Transaction.category_id.isnot(None)).distinct()}
+    borradas = []
+    for c in db().query(Category):
+        if c.id not in used and c.kind not in protected:
+            db().query(Rule).filter(Rule.category_id == c.id).delete()
+            borradas.append(c.name)
+            db().delete(c)
+    db().commit()
+    return jsonify({"deleted": borradas, "count": len(borradas)})
 
 
 # ---------- transacciones ----------

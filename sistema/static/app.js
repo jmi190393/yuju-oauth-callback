@@ -133,34 +133,78 @@ async function renderInicio() {
   if (gc) gc.onclick = renderPorCatalogar;
 }
 
+async function refreshCategories() {
+  state.categories = await api("/categories");
+}
+
+function catChips(cats) {
+  // Categorías gastables, en orden alfabético, + botón para crear una nueva.
+  const gastables = cats.filter((c) => c.kind !== "ingreso")
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  return gastables.map((c) => `<button class="chip" data-cat="${c.id}">${c.emoji} ${esc(c.name)}</button>`).join("")
+    + `<button class="chip" data-new="1" style="border-style:dashed">➕ Otra…</button>`;
+}
+
 async function renderPorCatalogar() {
   $app.innerHTML = `<div class="loading">Cargando…</div>`;
   const grupos = await api("/uncategorized");
-  const cats = state.categories.filter((c) => c.kind !== "ingreso");
   if (!grupos.length) {
-    $app.innerHTML = `<h1>Por catalogar</h1><div class="card"><div class="sub">🎉 ¡Todo catalogado! No hay movimientos pendientes.</div></div>`;
+    $app.innerHTML = `
+    <h1>Por catalogar</h1>
+    <div class="card"><div class="sub">🎉 ¡Todo catalogado! No hay gastos pendientes.</div></div>
+    <div class="card">
+      <div class="name">🧹 Limpiar categorías</div>
+      <div class="sub mt">Quita las categorías que no usaste en ningún movimiento, para dejar la lista limpia.</div>
+      <div class="mt"><button class="btn-line btn-block" id="cleanup">Quitar categorías sin usar</button></div>
+    </div>`;
+    document.getElementById("cleanup").onclick = doCleanup;
     return;
   }
   $app.innerHTML = `
   <h1>Por catalogar (${grupos.length})</h1>
-  <p class="sub" style="margin:0 4px 12px">Toca la categoría de cada comercio. El sistema lo recordará y ya no volverá a preguntar por ese comercio.</p>
+  <p class="sub" style="margin:0 4px 12px">Toca la categoría de cada comercio (o <b>➕ Otra…</b> para crear una nueva, ej. Ropa). El sistema lo recuerda y ya no vuelve a preguntar.</p>
   <div id="glist">${grupos.map((gp) => `
     <div class="card" data-desc="${esc(gp.description)}">
       <div class="name">${gp.direction === "abono" ? "＋ " : ""}${esc(gp.description)}</div>
       <div class="meta">${gp.count} movimiento(s) · ${money(gp.total)}</div>
-      <div class="chips">${cats.map((c) => `<button class="chip" data-cat="${c.id}">${c.emoji} ${esc(c.name)}</button>`).join("")}</div>
-    </div>`).join("")}</div>`;
+      <div class="chips">${catChips(state.categories)}</div>
+    </div>`).join("")}</div>
+  <div class="mt"><button class="btn-line btn-block" id="cleanup">🧹 Quitar categorías que no uso</button></div>`;
+
+  const assign = async (card, catId) => {
+    const r = await api("/categorize-merchant", { method: "POST", body: {
+      description: card.dataset.desc, category_id: +catId, remember: true } });
+    card.querySelector(".chips").outerHTML = `<div class="sub">✅ ${r.updated} catalogado(s) y recordado</div>`;
+    card.style.opacity = ".55";
+    toast("Aprendido ✅");
+  };
   $app.querySelectorAll(".card[data-desc]").forEach((card) => {
     card.querySelectorAll(".chip").forEach((chip) => chip.onclick = async () => {
       try {
-        const r = await api("/categorize-merchant", { method: "POST", body: {
-          description: card.dataset.desc, category_id: +chip.dataset.cat, remember: true } });
-        card.querySelector(".chips").outerHTML = `<div class="sub">✅ ${r.updated} catalogado(s) y recordado</div>`;
-        card.style.opacity = ".55";
-        toast("Aprendido ✅");
+        if (chip.dataset.new) {
+          const name = (prompt("Nombre de la nueva categoría (ej. Ropa):") || "").trim();
+          if (!name) return;
+          const nc = await api("/categories", { method: "POST", body: { name } });
+          await refreshCategories();
+          await assign(card, nc.id);
+          toast(nc.created ? `Categoría "${name}" creada ✅` : "Aprendido ✅");
+        } else {
+          await assign(card, chip.dataset.cat);
+        }
       } catch (e) { toast(e.message); }
     });
   });
+  document.getElementById("cleanup").onclick = doCleanup;
+}
+
+async function doCleanup() {
+  if (!confirm("¿Quitar las categorías que no tienen ningún movimiento? (No borra nada de tus gastos, solo categorías vacías.)")) return;
+  try {
+    const r = await api("/categories/cleanup", { method: "POST", body: {} });
+    await refreshCategories();
+    toast(r.count ? `${r.count} categorías sin usar eliminadas` : "No había categorías sin usar");
+    renderPorCatalogar();
+  } catch (e) { toast(e.message); }
 }
 
 /* ---------- captura rápida ---------- */

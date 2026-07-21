@@ -21,6 +21,7 @@ RULES: list[tuple[str, str, str]] = [
     (r"LA COMER|TIENDA COM MEX|COSTCO|WAL.?MART|SORIANA|CHEDRAUI|SUPERAMA|7.?ELEVEN|OXXO", "Súper", ""),
     # Restaurantes y comida
     (r"UBER\s*EATS|RAPPI|DIDI FOOD", "Comida a domicilio", ""),
+    (r"\bUBER\b|\bDIDI\b|CABIFY|\bTAXI\b|\bBEAT\b", "Uber y transporte", ""),
     (r"REST|TACOS|CAFE|STARBUCKS|SUSHI|PIZZA|BURGER|GRILL|COCINA|BISTRO", "Restaurantes", ""),
     # Auto
     (r"PASE\b|TAG\b|CAPUFE|AUTOPISTA", "Casetas", ""),
