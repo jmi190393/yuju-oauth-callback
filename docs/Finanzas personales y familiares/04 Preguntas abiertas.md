@@ -53,11 +53,14 @@
 - [x] ~~Datos fiscales~~ ✅ (21/jul): CSF recibida y capturada en [[01 Perfil financiero]] (RFC MIVJ9303192A9, RESICO 626, CP 52786)
 - [x] ~~Nintendo $449~~ ✅ (21/jul): compra única, no membresía
 
-## 🔁 ÚNICOS PENDIENTES (aclarar y re-preguntar)
-1. Cuenta BBVA propia …9080 ($35,200 + $18,000 "plac") — re-explicada arriba, falta respuesta
-2. Orden de pago al extranjero $35,264.60 (28/ene, desde débito BBVA, no tarjeta) — falta respuesta
-3. SPEIs de regreso a la cuenta de la nómina ($8,957.06 feb y $4,616.80 abr) — falta respuesta
-4. Los $2,895 ×2 de enero (a "Jaime MV" y a Nurit) — falta respuesta
+## ✅ CUESTIONARIO CERRADO (2026-07-21)
+Últimas respuestas:
+1. Cuenta BBVA propia …9080 → "puede que sea pago de tarjeta" (semi-resuelto; se categoriza como pago de tarjeta propia)
+2. Orden de pago al extranjero $35,264.60 (28/ene) → "yo creo que es eToro" (fondeo de inversión)
+3. SPEIs a la cuenta de la nómina ($8,957.06 + $4,616.80) → **pago de compra de producto a la empresa familiar**
+4. $2,895 ×2 de enero → no recuerda (queda como transferencia personal sin clasificar)
+
+**No queda ninguna pregunta abierta. Siguiente paso: construcción Fase 1 MVP** ([[03 Blueprint del sistema]]).
 
 ## Documentos pendientes de subir
 - [x] ~~Banco Safra (EUA)~~ ✅ estado jun/2026 analizado: USD $77,353 (no se necesita nada más; un estado trimestral para mantener)
