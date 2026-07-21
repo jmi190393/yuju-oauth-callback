@@ -33,6 +33,15 @@
 - [ ] ¿Cuánto hay HOY en eToro, GBM y Cetes? (desde Revolut entraron $149,990 a eToro y $100,000 a GBM en 2026)
 - [ ] ¿Viaje a Reino Unido en puerta? (pagó ETA UK el 8/jun) — para presupuestarlo
 
+### Del análisis Amex
+- [ ] ⚠️ **Bupa dos veces en 5 meses**: ene $103,509+$36,254 (Gold) y may/jun $102,421+$35,167 (Platinum). ¿Son dos pólizas (tuya y de Nurit)? ¿Renovación adelantada? ¿Se duplicó algo?
+- [ ] ¿Qué es **"TIENDA COM MEX E COMMER"**? ($37,506 en 25 cargos, todos los meses)
+- [ ] ¿Qué es **H2OSYS / Soluciones en Agua MAIM**? ($9,261.57 ×2 + $517/mes — ¿sistema de agua de la casa?)
+- [ ] ¿Dónde se cobran **Netflix/Spotify/Disney/Amazon Prime/Obsidian**? No aparecen en ninguna de las 4 tarjetas analizadas.
+- [ ] Apple.com/Bill: 23 microcargos ($49–$399). ¿Qué suscripciones Apple tienen activas? (¿iCloud, Apple One, apps?)
+- [ ] KLM $12,112 (8 cargos en may) + pagaste ETA UK: ¿viaje a Europa próximo? ¿presupuesto?
+- [ ] ¿"MERCADOPAGO*OPTICASLUX" $12,080 a 6 MSI (abr) — lentes?
+
 ### Del cuestionario (pendientes menores)
 - [ ] Confirmar interpretación de la meta: "los primeros 4 meses del bebé" (frase "aquellos cuatro me puede costar")
 - [ ] Datos fiscales completos para el módulo de facturación (cuando arranque fase 2)
@@ -41,7 +50,7 @@
 - [x] ~~BBVA~~ ✅ 7 meses analizados
 - [x] ~~Revolut crédito~~ ✅ 6 meses analizados (con MSI)
 - [x] ~~Revolut débito~~ ✅ CSV+PDF ene–jun analizados
-- [ ] **Amex Gold y Amex Platinum** (año en curso) ← prioridad #1: ~$96k/mes de gasto real viven ahí
+- [x] ~~Amex Gold y Platinum~~ ✅ 10 estados analizados (ene–jul)
 - [ ] Banamex (si tiene actividad; está por cancelarse)
 - [ ] GBM · eToro · Cetes Directo (último estado o captura de saldo actual basta, para patrimonio)
 
