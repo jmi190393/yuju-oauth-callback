@@ -1,10 +1,12 @@
-# 12 · Manual del sistema (Fase 1 MVP)
+# 12 · Manual del sistema (Fase 1 MVP · v1.4)
 
-El sistema vive en la carpeta `sistema/` del repositorio. Es una **PWA** (se instala en el celular desde el navegador), en español, con login para Jaime y Nurit.
+El sistema vive en la carpeta `sistema/` del repositorio. Es una **PWA** (se instala en el celular desde el navegador), en español, con login para Jaime y Nurit. **Desplegado en la nube en PythonAnywhere**: `https://jmi190393.pythonanywhere.com`.
 
 ## Entrar
 - Usuarios: `jaime` y `nurit` · contraseña inicial: `finanzas2026`
 - ⚠️ Cambiarla al primer ingreso: **Más → Seguridad**.
+- **Instalarla como app**: abrir la URL en el celular → Compartir → *Agregar a pantalla de inicio*.
+- **Diseño**: se adapta solo a modo claro u oscuro según el celular. Texto justificado, números tabulares.
 
 ## Las 5 pantallas
 
@@ -25,18 +27,29 @@ Todos los movimientos (manuales + importados), filtro por mes y búsqueda. Tocar
 La **regla del sobrante** en vivo: ingreso − fijos − aprovisionamiento − MSI del mes − variables = sobrante invertible. Cada categoría con barra y semáforo (verde ≤80%, amarillo ≤100%, rojo excedido).
 
 ### 📝 Por catalogar (el catálogo asistido)
-Cuando importas, el sistema clasifica solo lo que reconoce. Lo que NO sabe queda en **Por catalogar** (aparece en Inicio con un contador y en Más). Ahí ves cada comercio agrupado, de mayor a menor monto, y le tocas su categoría. **El sistema lo recuerda**: la próxima vez que aparezca ese comercio, lo clasifica solo. Así, mes a mes, casi todo queda automático.
+Cuando importas, el sistema clasifica solo lo que reconoce. Lo que NO sabe queda en **Por catalogar** (aparece en Inicio con un contador y en Más). Ahí ves cada comercio agrupado, de mayor a menor monto, con su **referencia** (beneficiario/folio, para identificar pagos ambiguos como "PAGO CUENTA DE TERCERO"). Le tocas su categoría y **el sistema la recuerda**: la próxima vez que aparezca ese comercio lo clasifica solo. Detalles clave:
+- **➕ Otra…**: crea una categoría nueva escribiendo el nombre (ej. Ropa). Queda disponible y se recuerda.
+- **Cambiar**: si te equivocas, tras elegir puedes rectificar al momento.
+- **Orden alfabético** de las categorías para encontrarlas rápido.
+- **Misma empresa unificada**: "UBER TRIP 4821" y "UBER TRIP 9930" cuentan como un solo comercio (ignora el número que cambia) → no te pregunta dos veces.
+- **🧹 Quitar categorías que no uso**: borra las categorías sin ningún movimiento (nunca borra gastos).
+
+### ✏️ Editar categorías (reclasificar cuando quieras)
+En **Más → Editar categorías**: busca cualquier comercio, ve su categoría actual y cámbiala. Se actualizan **todos** sus movimientos y el sistema reaprende.
 
 ### ☰ Más
 - **Por catalogar**: gastos que el sistema no supo clasificar (te pregunta y aprende)
+- **Editar categorías**: reclasificar cualquier comercio cuando quieras
 - **MSI**: planes activos + flujo comprometido de los próximos 6 meses
 - **Suscripciones**: costo anual total + estado (activa/por confirmar/cancelada)
 - **Metas**: progreso y actualización de montos
 - **Cuentas**: saldos por institución (tocar para actualizar inversiones)
-- **Importar**: subir estados de cuenta
+- **Importar**: subir estados de cuenta (**uno o varios a la vez**)
+- **Seguridad**: cambiar contraseña
+- **Actualizar programa**: versión instalada + comando exacto para actualizar sin borrar datos
 
 ## Importar estados de cuenta (el corazón del sistema)
-Cada mes, descargar y subir en **Más → Importar**:
+Cada mes, descargar y subir en **Más → Importar** (se pueden **seleccionar varios archivos a la vez**):
 
 | Cuándo (tras el corte) | Documento |
 |---|---|
@@ -53,5 +66,18 @@ El sistema **detecta el banco solo**, concilia contra los totales oficiales del 
 ## Datos ya cargados al estrenar
 Cuentas con saldos reales, categorías con topes basados en el gasto real 2026, suscripciones detectadas, metas (fondo 3 meses $450k, bebé, viaje), aprovisionamiento de seguros ($346,600/año) y los datos fiscales para la fase de facturación.
 
+## Actualizar el programa (sin perder datos)
+Toda la información vive en **un solo archivo, `finanzas.db`**, separado del código. Para actualizar:
+1. Subir el ZIP nuevo (Files → Upload).
+2. Consola Bash: `unzip -o ~/finanzas-*.zip -d ~/sistema` (solo sobrescribe el programa; **no toca `finanzas.db`**).
+3. Web → Reload.
+
+Respaldo opcional antes de actualizar: `cp ~/sistema/finanzas.db ~/respaldo-$(date +%F).db`. Verificar que no se perdió nada: contar movimientos con `sqlite3`/`python3` (debe seguir en 972+). El mismo instructivo vive dentro de la app en **Más → Actualizar programa**.
+
+## Recordatorios (calendario del celular)
+Se entregaron archivos `.ics` con alarmas mensuales:
+- **Subir estados**: día 9 (Amex Gold), 15 (BBVA), 26 (Amex Platinum), 1 (Revolut).
+- **Pago de tarjeta (4 días antes)**: día 13 (Platinum), 16 (Revolut), 19 (Gold).
+
 ## Qué sigue (Fase 2)
-Bot de WhatsApp (texto o foto del ticket), OCR, módulo de facturación CFDI con recordatorios, alertas push. Ver [[03 Blueprint del sistema]].
+Bot de WhatsApp (texto o foto del ticket), OCR, módulo de facturación CFDI con recordatorios, alertas push. Ver [[03 Blueprint del sistema]] y la bitácora [[15 Bitácora y versiones]].

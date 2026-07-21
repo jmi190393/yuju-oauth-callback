@@ -18,8 +18,10 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 - [[09 Análisis Inversiones]] — Cetes, Revolut Inversión, eToro; falta el contrato real de GBM.
 - [[10 Análisis Banamex 2026]] — Solo domicilia CFE y gas; anualidad $1,427 → cancelarla es correcto (migrando domiciliaciones).
 - [[11 Resumen ejecutivo 2026]] — La foto completa: ingresos, gasto real, MSI, seguros, patrimonio y diagnóstico.
-- [[12 Manual del sistema]] — Cómo usar la PWA: pantallas, captura, importación mensual.
-- [[13 Arquitectura y calidad del código]] — Stack, decisiones, revisión de calidad y riesgos.
+- [[12 Manual del sistema]] — Cómo usar la PWA: pantallas, catálogo asistido, importación, actualización.
+- [[13 Arquitectura y calidad del código]] — Stack (Flask), decisiones, revisión de calidad y riesgos.
+- [[14 Despliegue en PythonAnywhere]] — Guía paso a paso para publicar/actualizar en la nube.
+- [[15 Bitácora y versiones]] — Historial de versiones (1.0→1.4), despliegue, respaldo.
 
 ## Estado del proyecto
 
@@ -31,4 +33,6 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 | Resumen ejecutivo | ✅ Entregado (2026-07-21) |
 | Cuestionario final | ✅ Cerrado (2026-07-21) — 25/25 respondidas |
 | Construcción MVP | ✅ **Fase 1 construida** (2026-07-21) — carpeta `sistema/`, ver [[12 Manual del sistema]] |
-| Despliegue en la nube | ⏳ Siguiente paso (opciones en `sistema/README.md`) |
+| Despliegue en la nube | ✅ **EN VIVO** en PythonAnywhere · v1.4 · datos 2026 cargados |
+| Mejoras UX + catálogo asistido | ✅ v1.1→1.4 (ver [[15 Bitácora y versiones]]) |
+| Fase 2 (WhatsApp + facturación) | ⏸ Pendiente (al regreso del viaje) |
