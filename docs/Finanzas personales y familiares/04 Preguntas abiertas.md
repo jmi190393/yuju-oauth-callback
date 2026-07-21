@@ -13,20 +13,20 @@
 ## 📋 Preguntas acumuladas — 📨 ENTREGADAS al usuario el 2026-07-21 (esperando respuestas)
 
 ### Urgente / accionable
-- [ ] ⚠️ ¿Ya se pagaron los **$30,902.42** de la TDC Revolut? (fecha límite: 20/jul/2026)
+- [x] ~~¿Ya se pagaron los **$30,902.42** de la TDC Revolut?~~ ✅ (2026-07-21) "Ya" — pagado
 
 ### Del análisis BBVA
-- [ ] ¿Qué es la cuenta BBVA propia (…9080) que recibió $35,200 + $18,000 ("plac")? ¿Cuenta de la esposa, apartado, o algo más?
-- [ ] ¿La orden de pago al extranjero de $35,264.60 (28/ene) qué fue? (¿prepago del viaje a Asia?)
-- [ ] Pagos de regreso a la cuenta origen de la nómina: $8,957.06 ("a1077429", feb) y $4,616.80 ("1100102-…", abr) — ¿pagos a la empresa familiar?
-- [ ] ¿$3,490 a José Luis Aparicio (may)? ¿$2,895 ×2 (ene, a "jaime MV" y a Nurit)? — ¿qué fueron?
+- [ ] 🔁 ¿Qué es la cuenta BBVA propia (…9080) que recibió $35,200 + $18,000 ("plac")? — respuesta 21/jul: "no entendí" → **re-explicar**: son transferencias desde su BBVA a OTRA cuenta BBVA a su nombre terminación 9080
+- [ ] 🔁 Orden de pago al extranjero $35,264.60 (28/ene) — preguntó "¿de qué tarjeta?" → **aclarar**: no fue tarjeta, fue una ORDEN DE PAGO INTERNACIONAL enviada desde su cuenta de débito BBVA
+- [ ] 🔁 Pagos $8,957.06 (feb) y $4,616.80 (abr) — preguntó "¿qué tarjeta?" → **aclarar**: no son tarjeta, son SPEIs desde BBVA de vuelta a la cuenta bancaria de donde le llega la nómina (¿empresa familiar?)
+- [x] ~~$3,490 a José Luis Aparicio~~ ✅ (21/jul): compra de producto → categoría compras. Pendiente sub-pregunta: los $2,895 ×2 de enero no los respondió
 - [ ] ¿Reconoces **FANFIX.IO $198.09 USD** (20/ene, débito BBVA)? Cargo tipo suscripción.
 - [ ] ¿Quién paga los **$160/mes** (venta a 36 mensualidades, va 29/36 — Impulso Emprendimientos / World Wide Tech Ventures)?
 - [ ] El mantenimiento "Serena 506" varió: $15,477 (ene) → $21,798.61 (feb–jun) → $17,798.61 (jul). ¿Por qué?
 - [ ] ¿Qué servicio da Enrique Cruz Segura ($2,320/mes)?
 
 ### Del análisis Revolut
-- [ ] ¿A quién fueron los **$270,000 a Banorte el 26/feb**? (en dic salieron $500k a Banorte, "donativo" a Moisés)
+- [x] ~~¿$270,000 a Banorte el 26/feb?~~ ✅ (21/jul): pago de una deuda que tenía con su suegro (un mueble) → categoría pago de deuda familiar, no recurrente
 - [ ] ¿La tarjeta adicional ****0870 es de Nurit?
 - [ ] Claude $3,477.96 (abr): ¿plan anual o mensual? · Nutrafol $3,576.87: ¿suscripción recurrente? · OpenAI $110/mes cesó en marzo: ¿cancelada?
 - [x] ~~¿El pico de $73,886 en Amex B (jun)?~~ ✅ resuelto: mensualidades del MSI automático Bupa+KLM en Platinum; el fijo $9,289.34 eran mensualidades de planes MSI previos
@@ -45,7 +45,7 @@
 ### Del análisis GBM e inversiones
 - [x] ~~Contrato GBM en $0~~ ✅ resuelto: el dinero vive en GBM+ internacional (los $100k se convirtieron en USD $5,776.17 el mismo día)
 - [ ] Concentración de riesgo: TQQQ (Nasdaq ×3) domina tanto eToro como GBM+. ¿Es una decisión consciente de portafolio? (nota para conversación, no urgente)
-- [ ] ¿De dónde llegaron **$252,367.78 a Revolut el 7/feb** (SPEI vía STP)? No salieron de BBVA ni del contrato GBM conocido.
+- [~] ¿De dónde llegaron **$252,367.78 a Revolut el 7/feb**? — respuesta 21/jul: "posible pago de trabajo" → ingreso extraordinario laboral (semi-resuelto; confirmar origen exacto si aparece de nuevo)
 
 ### Del cuestionario (pendientes menores)
 - [ ] Confirmar interpretación de la meta: "los primeros 4 meses del bebé" (frase "aquellos cuatro me puede costar")
