@@ -20,11 +20,18 @@ BBVA ──$1,029,368──▶ Revolut (cuenta Actual)
 **El "colchón invisible": $237,773 en Revolut Inversión** ganando ~8.9% anual con liquidez diaria. El diagnóstico de "no hay fondo de emergencia" se corrige: sí existe, pero está en Revolut y no se ve desde BBVA → razón #1 para el dashboard consolidado.
 
 ## Tarjeta de crédito Revolut (Premium)
-- **Sin planes MSI activos** en ene–jun (las secciones de compras a meses vienen vacías los 6 meses).
 - Corte: **fin de mes** · Fecha límite de pago: **día 20 del mes siguiente**.
-- Hábito: la paga casi de inmediato tras cada compra (a veces el mismo día) desde el saldo Revolut.
+- Hábito: los cargos no diferidos los paga casi de inmediato desde el saldo Revolut.
 - ⚠️ **Pago de junio: $30,902.42 con fecha límite 20/jul/2026** — verificar que se haya cubierto.
 - Uso por tarjeta (6 meses): titular ****9378 $61,081 · adicional ****0870 $65,254 (¿es la de Nurit?).
+
+### MSI — sí hay, y muchos (corregido)
+El usuario difiere sistemáticamente a **3 meses sin intereses (0%)** las compras grandes, sobre todo en viajes:
+- **30 planes MSI en 2026** por un total diferido de **$97,350.59** (incluida la suscripción de Claude a 3 MSI de $1,159.32).
+- Tandas: 27/mar (fin viaje China, 4 planes) · 4–15/abr (Corea/China + Claude, 20 planes) · 19/may (Miami: Apple $13,030, Vuori, Nordstrom, Nutrafol…, 6 planes).
+- Al corte del 30/jun: **6 planes activos, $8,846.34 pendientes** — todos liquidan con su pago 3/3 en el ciclo de julio.
+- ✅ Verificado: el "pago para no generar intereses" de junio ($30,902.42) es **exactamente** la suma de las mensualidades MSI exigibles de ese corte.
+- Nota del periodo: los 3 MSI convierten el gasto de un viaje en 3 mensualidades — el módulo de pagos diferidos del sistema debe proyectar esto por mes y por tarjeta.
 
 ## Los viajes de 2026 (el uso real de Revolut)
 | Viaje | Fechas | Gasto en Revolut |
@@ -51,11 +58,7 @@ Gasto local MX con Revolut: mínimo (~$4.5k) — confirma la regla "Revolut = vi
 - La cuenta Actual se queda casi en $0 ($10.09 al 27/jun): todo duerme en Inversión. Buen hábito.
 
 ## Preguntas nuevas
-1. ¿A quién fueron los **$270,000 a Banorte el 26/feb**? (en dic también salieron $500k a Banorte "donativo").
-2. ¿La tarjeta adicional ****0870 es de Nurit?
-3. ¿Ya pagaste los **$30,902.42** de la TDC Revolut (vencía 20/jul)?
-4. Claude $3,477.96: ¿anual o mensual? · Nutrafol: ¿sigue activa? · ¿OpenAI la cancelaste?
-5. ¿Cuánto tienes hoy en eToro y GBM? (para el módulo de patrimonio; con corte a jun: les entraron $149,990 y $100,000 desde Revolut).
+Consolidadas en [[04 Preguntas abiertas]] — se harán todas juntas cuando el usuario confirme que no subirá más estados de cuenta.
 
 ## Implicaciones para el sistema
 - **Importadores listos**: BBVA PDF ✅ · Revolut crédito PDF ✅ · Revolut débito CSV ✅.

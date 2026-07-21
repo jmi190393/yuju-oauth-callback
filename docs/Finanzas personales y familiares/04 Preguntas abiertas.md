@@ -1,25 +1,53 @@
 # 04 · Preguntas abiertas y pendientes
 
-## Preguntas resueltas ✅ (2026-07-19)
-1. **Tarjeta única compartida**: **Amex Gold** para el día a día; **Revolut crédito** cuando están fuera de México (mejor tipo de cambio). El sistema tratará ambas como "tarjetas de pareja".
-2. **Entidad fiscal de las facturas**: **RFC personal (RESICO)**. ⚠️ Sigue pendiente verificar con contador la deducibilidad en RESICO persona física.
-3. **Alcance de pareja**: el dinero sale de la cuenta de él (BBVA); la esposa también genera ingresos pero sus cuentas propias quedan fuera por ahora. Ella tendrá acceso completo para ver y capturar.
-4. **Canal del bot**: **WhatsApp** (alta en Meta Cloud API; evaluar límites del nivel gratuito al construir la fase 2).
+> [!note] Instrucción vigente
+> El usuario pidió acumular TODAS las preguntas aquí y hacérselas juntas **hasta que confirme que ya no subirá más estados de cuenta**. No preguntar por partes.
 
-## Preguntas menores abiertas
-- Interpretación de la meta 4: confirmar frase "aquellos cuatro me puede costar" (¿los primeros 4 meses del bebé?).
+## Preguntas resueltas ✅ (2026-07-19)
+1. **Tarjeta única compartida**: **Amex Gold** para el día a día; **Revolut crédito** fuera de México. Ambas se tratan como "tarjetas de pareja".
+2. **Entidad fiscal de las facturas**: **RFC personal (RESICO)**. ⚠️ Pendiente verificar con contador la deducibilidad en RESICO persona física.
+3. **Alcance de pareja**: el dinero sale de las cuentas de él; la esposa tiene acceso completo para ver y capturar.
+4. **Canal del bot**: **WhatsApp**.
+5. ~~¿Revolut tiene MSI?~~ → SÍ: 30 planes a 3 meses 0% en 2026 (corregido en [[07 Análisis Revolut 2026]]).
+
+## 📋 Preguntas acumuladas (hacer todas al final)
+
+### Urgente / accionable
+- [ ] ⚠️ ¿Ya se pagaron los **$30,902.42** de la TDC Revolut? (fecha límite: 20/jul/2026)
+
+### Del análisis BBVA
+- [ ] ¿Qué es la cuenta BBVA propia (…9080) que recibió $35,200 + $18,000 ("plac")? ¿Cuenta de la esposa, apartado, o algo más?
+- [ ] ¿La orden de pago al extranjero de $35,264.60 (28/ene) qué fue? (¿prepago del viaje a Asia?)
+- [ ] Pagos de regreso a la cuenta origen de la nómina: $8,957.06 ("a1077429", feb) y $4,616.80 ("1100102-…", abr) — ¿pagos a la empresa familiar?
+- [ ] ¿$3,490 a José Luis Aparicio (may)? ¿$2,895 ×2 (ene, a "jaime MV" y a Nurit)? — ¿qué fueron?
+- [ ] ¿Reconoces **FANFIX.IO $198.09 USD** (20/ene, débito BBVA)? Cargo tipo suscripción.
+- [ ] ¿Quién paga los **$160/mes** (venta a 36 mensualidades, va 29/36 — Impulso Emprendimientos / World Wide Tech Ventures)?
+- [ ] El mantenimiento "Serena 506" varió: $15,477 (ene) → $21,798.61 (feb–jun) → $17,798.61 (jul). ¿Por qué?
+- [ ] ¿Qué servicio da Enrique Cruz Segura ($2,320/mes)?
+
+### Del análisis Revolut
+- [ ] ¿A quién fueron los **$270,000 a Banorte el 26/feb**? (en dic salieron $500k a Banorte, "donativo" a Moisés)
+- [ ] ¿La tarjeta adicional ****0870 es de Nurit?
+- [ ] Claude $3,477.96 (abr): ¿plan anual o mensual? · Nutrafol $3,576.87: ¿suscripción recurrente? · OpenAI $110/mes cesó en marzo: ¿cancelada?
+- [ ] ¿El pico de $73,886 en Amex B (jun) y el plan fijo de $9,289.34/mes en Amex — qué son? (se verá con estados Amex)
+- [ ] ¿Cuánto hay HOY en eToro, GBM y Cetes? (desde Revolut entraron $149,990 a eToro y $100,000 a GBM en 2026)
+- [ ] ¿Viaje a Reino Unido en puerta? (pagó ETA UK el 8/jun) — para presupuestarlo
+
+### Del cuestionario (pendientes menores)
+- [ ] Confirmar interpretación de la meta: "los primeros 4 meses del bebé" (frase "aquellos cuatro me puede costar")
+- [ ] Datos fiscales completos para el módulo de facturación (cuando arranque fase 2)
 
 ## Documentos pendientes de subir
-- [ ] Estados de cuenta del año en curso: **BBVA, Amex Gold, Amex Platinum, Revolut, Banamex**
-- [ ] Estados de inversión: **GBM, eToro, Cetes Directo**
-- [ ] Datos fiscales para el módulo de facturación (cuando arranque la fase 2)
+- [x] ~~BBVA~~ ✅ 7 meses analizados
+- [x] ~~Revolut crédito~~ ✅ 6 meses analizados (con MSI)
+- [x] ~~Revolut débito~~ ✅ CSV+PDF ene–jun analizados
+- [ ] **Amex Gold y Amex Platinum** (año en curso) ← prioridad #1: ~$96k/mes de gasto real viven ahí
+- [ ] Banamex (si tiene actividad; está por cancelarse)
+- [ ] GBM · eToro · Cetes Directo (último estado o captura de saldo actual basta, para patrimonio)
 
 > [!tip] Al subir estados de cuenta
 > Tachar/ocultar número completo de tarjeta y CLABE. Lo necesario es: comercios, fechas y montos.
 
-## De los estados de cuenta se extraerá automáticamente
-- Días de corte y pago de cada tarjeta
-- Suscripciones reales (incluidas las de App Store) y sus fechas de renovación
-- MSI activos y su calendario
-- Promedios reales por categoría → topes iniciales del presupuesto
-- Cargos anuales de dic/ene → montos exactos a aprovisionar
+## De los estados de cuenta ya se extrajo
+- BBVA: días de corte (14), nómina real ($195,156/mes en 2 depósitos), recurrentes de casa/servicios
+- Revolut: corte fin de mes, pago día 20, mapa de traspasos, fondo Rendimientos Diarios ($237,763 al 30/jun), 30 planes MSI, viajes completos
