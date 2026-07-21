@@ -39,17 +39,25 @@
 - [x] ~~H2OSYS / Soluciones en Agua MAIM~~ ✅ (21/jul): sí, sistema de agua de la casa → categoría casa/mantenimiento ($517/mes recurrente)
 - [x] ~~¿Dónde se cobran Netflix/Prime/Obsidian?~~ ✅ (21/jul): Prime "debe estar en Amex" (o en mes de prueba) y Obsidian en Revolut — ninguno apareció en ene–jul, probablemente **cargos anuales fuera del periodo** → el sistema los detectará cuando caigan. Netflix/Spotify/Disney: no los mencionó (¿no los tienen?)
 - [x] ~~Suscripciones Apple~~ ✅ (21/jul): **iCloud** (los 23 microcargos de $49–$399 se registran como Apple/iCloud + compras App Store)
-- [ ] KLM $12,112 (8 cargos en may) + pagaste ETA UK: ¿viaje a Europa próximo? ¿presupuesto?
+- [x] ~~¿Viaje a Europa próximo?~~ ✅ (21/jul): **Europa 10 días, 22/jul – 2/ago/2026** (¡sale mañana!). El costo del viaje se divide **entre 4 personas** → el sistema debe soportar gastos compartidos/reembolsos en el módulo de viajes. KLM $12,112 + ETA UK eran de este viaje
 - [x] ~~MERCADOPAGO*OPTICASLUX $12,080 a 6 MSI~~ ✅ (21/jul): compra de lentes → categoría salud/óptica
 
 ### Del análisis GBM e inversiones
 - [x] ~~Contrato GBM en $0~~ ✅ resuelto: el dinero vive en GBM+ internacional (los $100k se convirtieron en USD $5,776.17 el mismo día)
-- [ ] Concentración de riesgo: TQQQ (Nasdaq ×3) domina tanto eToro como GBM+. ¿Es una decisión consciente de portafolio? (nota para conversación, no urgente)
+- [x] ~~Concentración de riesgo TQQQ/SPXL~~ ✅ (21/jul): pidió "recomendación" → **se activarán las alertas de concentración de riesgo** en el módulo de patrimonio (recomendado)
 - [~] ¿De dónde llegaron **$252,367.78 a Revolut el 7/feb**? — respuesta 21/jul: "posible pago de trabajo" → ingreso extraordinario laboral (semi-resuelto; confirmar origen exacto si aparece de nuevo)
 
 ### Del cuestionario (pendientes menores)
-- [ ] Confirmar interpretación de la meta: "los primeros 4 meses del bebé" (frase "aquellos cuatro me puede costar")
-- [ ] Datos fiscales completos para el módulo de facturación (cuando arranque fase 2)
+- [x] ~~Meta del bebé~~ ✅ (21/jul): confirmado — reporte de costo de **los primeros 4 meses del bebé**
+- [x] ~~Fondo de emergencia~~ ✅ (21/jul): dimensionar a **3 meses ≈ $450k**; base: los $238k de Revolut Inversión (faltarían ~$212k)
+- [x] ~~Datos fiscales~~ ✅ (21/jul): CSF recibida y capturada en [[01 Perfil financiero]] (RFC MIVJ9303192A9, RESICO 626, CP 52786)
+- [x] ~~Nintendo $449~~ ✅ (21/jul): compra única, no membresía
+
+## 🔁 ÚNICOS PENDIENTES (aclarar y re-preguntar)
+1. Cuenta BBVA propia …9080 ($35,200 + $18,000 "plac") — re-explicada arriba, falta respuesta
+2. Orden de pago al extranjero $35,264.60 (28/ene, desde débito BBVA, no tarjeta) — falta respuesta
+3. SPEIs de regreso a la cuenta de la nómina ($8,957.06 feb y $4,616.80 abr) — falta respuesta
+4. Los $2,895 ×2 de enero (a "Jaime MV" y a Nurit) — falta respuesta
 
 ## Documentos pendientes de subir
 - [x] ~~Banco Safra (EUA)~~ ✅ estado jun/2026 analizado: USD $77,353 (no se necesita nada más; un estado trimestral para mantener)

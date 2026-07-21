@@ -11,8 +11,21 @@ Respuestas del cuestionario inicial — 2026-07-19.
 
 ## Ingresos
 - Sueldo mensual **fijo** de $200k menos impuestos, depositado en **BBVA (Bancomer)** — todo el dinero entra ahí.
-- Rendimientos de inversión: **GBM, eToro, Cetes Directo**.
+- Rendimientos de inversión: **GBM, eToro, Cetes Directo** + retorno Wortev Capital ($160/mes, 36 mensualidades va 29/36).
 - Régimen fiscal: **RESICO** (persona física).
+
+## Datos fiscales (CSF del 04/dic/2025 — para el módulo de facturación)
+| Campo | Valor |
+|---|---|
+| RFC | **MIVJ9303192A9** |
+| Nombre (como en CSF, para CFDI 4.0) | JAIME MITRANI VULFOVICH |
+| Régimen | **626 — Régimen Simplificado de Confianza (RESICO)** desde 19/sep/2023 |
+| Código postal fiscal | **52786** (Huixquilucan, Edo. de México) |
+| Actividad económica | Servicios de consultoría en computación (100%) |
+| idCIF | 15090592832 |
+| Obligaciones | ISR provisional mensual y IVA definitivo mensual (**vencen día 17**) · Declaración anual (abril) |
+
+> [!note] El PDF completo de la CSF (con domicilio y CURP) NO se guarda en el repo — solo estos campos, que son los que pide un portal de facturación. Los pagos al SAT vistos en BBVA cuadran con la obligación mensual del día 17.
 
 ## Cuentas y tarjetas
 | Institución | Tipo | Notas |
