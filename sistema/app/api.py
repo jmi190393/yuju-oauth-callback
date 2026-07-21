@@ -10,6 +10,7 @@ from flask import Blueprint, g, jsonify, request
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
+from .advisor import ai_available, ask_advisor
 from .auth import (COOKIE, hash_password, login_required, make_token,
                    verify_password)
 from .categorizer import categorize, merchant_key, normalize
@@ -19,7 +20,7 @@ from .models import (Account, Category, Goal, ImportBatch, MsiPlan, Provision,
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
-APP_VERSION = "1.4"
+APP_VERSION = "1.5"
 GASTO_KINDS = ("fijo", "variable", "aprovisionamiento")
 
 
@@ -816,3 +817,279 @@ def list_imports():
                      "imported": b.n_imported, "skipped": b.n_skipped,
                      "reconciled": b.reconciled, "created_at": b.created_at.isoformat()}
                     for b in db().query(ImportBatch).order_by(ImportBatch.created_at.desc()).limit(50)])
+
+
+# ---------- asesor: consejos automáticos (gratis) + IA (Claude) ----------
+
+def _fmt(n):
+    """$1,234.56 — para textos legibles y para el resumen que va a la IA."""
+    return f"${n:,.2f}"
+
+
+def _months_of_data():
+    """Meses distintos con movimientos de gasto (para promediar a mensual)."""
+    meses = {d.strftime("%Y-%m")
+             for (d,) in db().query(Transaction.date)
+             .filter(Transaction.direction == "cargo").all()}
+    return meses
+
+
+def _gastos_hormiga(n_meses):
+    """Comercios con muchas compras chicas: el goteo que no se siente pero suma.
+
+    Criterio: mismo comercio (clave que ignora el número final) con 4+ cargos
+    y ticket promedio ≤ $600. Devuelve el equivalente MENSUAL para dimensionar
+    el ahorro potencial. Excluye categorías estructurales (no son fugas).
+    """
+    estructural = {c.id for c in db().query(Category)
+                   if c.kind in ("ingreso", "transferencia", "inversion", "fijo")}
+    rows = db().query(Transaction.description, Transaction.amount,
+                      Transaction.category_id) \
+        .filter(Transaction.direction == "cargo").all()
+    groups = {}
+    for desc, amount, cid in rows:
+        if cid in estructural:
+            continue
+        key = merchant_key(desc)
+        gp = groups.setdefault(key, {"count": 0, "total": 0.0, "variants": set(),
+                                     "cats": {}})
+        gp["count"] += 1
+        gp["total"] += amount
+        gp["variants"].add(desc)
+        if cid is not None:
+            gp["cats"][cid] = gp["cats"].get(cid, 0) + 1
+    names = {c.id: c.name for c in db().query(Category)}
+    out = []
+    for gp in groups.values():
+        avg = gp["total"] / gp["count"]
+        if gp["count"] >= 4 and avg <= 600:
+            dom = max(gp["cats"], key=gp["cats"].get) if gp["cats"] else None
+            out.append({
+                "description": min(gp["variants"], key=len),
+                "count": gp["count"], "avg": round(avg, 2),
+                "total": round(gp["total"], 2),
+                "mensual": round(gp["total"] / n_meses, 2),
+                "anual": round(gp["total"] / n_meses * 12, 2),
+                "category": names.get(dom, "(sin categoría)"),
+            })
+    out.sort(key=lambda x: -x["mensual"])
+    return out
+
+
+def _insights():
+    """Diagnóstico automático (gratis, siempre funciona). Sin IA."""
+    meses = _months_of_data()
+    n_meses = max(len(meses), 1)
+    month = date.today().strftime("%Y-%m")
+    b = _budget(month)
+    tc = _tc_usd()
+
+    tips = []
+
+    # 1) Gastos hormiga
+    hormiga = _gastos_hormiga(n_meses)
+    total_hormiga_mes = round(sum(h["mensual"] for h in hormiga), 2)
+    if hormiga:
+        top = hormiga[0]
+        tips.append({
+            "icon": "🐜", "title": "Gastos hormiga detectados",
+            "body": f"{len(hormiga)} comercios con compras chicas y frecuentes suman "
+                    f"~{_fmt(total_hormiga_mes)} al mes ({_fmt(total_hormiga_mes * 12)} al año). "
+                    f"El más grande: {top['description']} ({top['count']} cargos, "
+                    f"{_fmt(top['mensual'])}/mes).",
+            "level": "alerta" if total_hormiga_mes > 2000 else "info",
+        })
+
+    # 2) Suscripciones
+    subs = db().query(Subscription).filter(Subscription.status == "activa").all()
+    anual_subs = sum(to_mxn(s.amount, s.currency, tc) *
+                     (12 if s.frequency == "mensual" else 1) for s in subs)
+    por_confirmar = db().query(func.count(Subscription.id)).filter(
+        Subscription.status == "por_confirmar").scalar() or 0
+    if subs:
+        extra = (f" Hay {por_confirmar} por confirmar — revísalas por si ya no las usas."
+                 if por_confirmar else "")
+        tips.append({
+            "icon": "🔁", "title": "Suscripciones",
+            "body": f"{len(subs)} activas cuestan {_fmt(anual_subs)} al año "
+                    f"({_fmt(anual_subs / 12)}/mes).{extra}",
+            "level": "info",
+        })
+
+    # 3) Fondo de emergencia — meses para llegar con el sobrante
+    sobrante = b["sobrante_real_proyectado"]
+    fondo = db().query(Goal).filter(Goal.name.ilike("%emergencia%")).first()
+    if fondo and fondo.target_amount:
+        falta = max(fondo.target_amount - fondo.current_amount, 0)
+        if falta <= 0:
+            tips.append({"icon": "🛡️", "title": "Fondo de emergencia",
+                         "body": "¡Meta cumplida! Ya tienes tu colchón completo.",
+                         "level": "bueno"})
+        elif sobrante > 0:
+            m = falta / sobrante
+            tips.append({
+                "icon": "🛡️", "title": "Fondo de emergencia",
+                "body": f"Te faltan {_fmt(falta)}. Con tu sobrante actual "
+                        f"({_fmt(sobrante)}/mes) lo completas en ~{m:.0f} meses.",
+                "level": "info"})
+        else:
+            tips.append({
+                "icon": "🛡️", "title": "Fondo de emergencia",
+                "body": f"Te faltan {_fmt(falta)}, pero este mes no proyectas sobrante. "
+                        f"Recortar gastos hormiga liberaría {_fmt(total_hormiga_mes)}/mes.",
+                "level": "alerta"})
+
+    # 4) MSI: meses pesados de los próximos 6
+    this_month = date.today().strftime("%Y-%m")
+    flow = {}
+    for p in db().query(MsiPlan).filter(MsiPlan.status == "activo"):
+        for m, pago in _plan_unpaid_months(p):
+            if m >= this_month:
+                flow[m] = flow.get(m, 0) + pago
+    prox = [(m, flow.get(m, 0)) for m in (_add_months(this_month, i) for i in range(6))]
+    if prox and max(v for _, v in prox) > 0:
+        pico_m, pico_v = max(prox, key=lambda x: x[1])
+        tips.append({
+            "icon": "📅", "title": "Meses sin intereses",
+            "body": f"El mes más pesado de MSI es {pico_m}: {_fmt(pico_v)}. "
+                    f"Tenlo presente para no encimar compras grandes ahí.",
+            "level": "info"})
+
+    # 5) Concentración de riesgo (apalancados / un solo activo)
+    riesgo = db().query(Account).filter(
+        Account.in_networth, Account.active,
+        (Account.name.ilike("%TQQQ%") | Account.name.ilike("%SPXL%") |
+         Account.name.ilike("%apalanc%") | Account.notes.ilike("%apalanc%"))).all()
+    if riesgo:
+        total_riesgo = sum(to_mxn(a.balance, a.currency, tc) for a in riesgo)
+        patrimonio = sum(to_mxn(a.balance, a.currency, tc)
+                         for a in db().query(Account).filter(Account.in_networth, Account.active))
+        pct = round(total_riesgo / patrimonio * 100) if patrimonio else 0
+        tips.append({
+            "icon": "⚠️", "title": "Concentración de riesgo",
+            "body": f"Tienes {_fmt(total_riesgo)} ({pct}% del patrimonio) en instrumentos "
+                    f"apalancados/volátiles. Con un bebé en camino, vale la pena revisar si "
+                    f"ese porcentaje te deja dormir tranquilo.",
+            "level": "alerta" if pct >= 15 else "info"})
+
+    return {
+        "generated_for": month,
+        "tips": tips,
+        "gastos_hormiga": hormiga[:12],
+        "gastos_hormiga_mensual": total_hormiga_mes,
+        "gastos_hormiga_anual": round(total_hormiga_mes * 12, 2),
+    }
+
+
+def _advisor_summary(ins):
+    """Resumen AGREGADO en español para la IA. Nunca números de cuenta ni
+    movimientos individuales: solo totales y categorías."""
+    month = date.today().strftime("%Y-%m")
+    b = _budget(month)
+    tc = _tc_usd()
+    L = []
+    L.append(f"Mes en curso: {month}.")
+    L.append(f"Ingreso mensual estimado: {_fmt(b['ingreso'])}.")
+    L.append(f"Gasto real del mes: {_fmt(b['gasto_real'])}.")
+    L.append(f"Sobrante proyectado (para ahorrar/invertir): "
+             f"{_fmt(b['sobrante_real_proyectado'])}.")
+    L.append(f"Gasto fijo planeado: {_fmt(b['fijos_plan'])}; variable planeado: "
+             f"{_fmt(b['variables_plan'])}; aprovisionamiento de seguros: "
+             f"{_fmt(b['aprovisionamiento'])}/mes; MSI de este mes: {_fmt(b['msi_mes'])}.")
+
+    # Top categorías de gasto del mes
+    cats = sorted([c for c in b["categorias"] if c["spent"] > 0],
+                  key=lambda x: -x["spent"])[:8]
+    if cats:
+        L.append("Categorías con más gasto este mes: " +
+                 "; ".join(f"{c['name']} {_fmt(c['spent'])}" for c in cats) + ".")
+
+    # Patrimonio y MSI
+    patrimonio = sum(to_mxn(a.balance, a.currency, tc)
+                     for a in db().query(Account).filter(Account.in_networth, Account.active))
+    msi_pending = sum(sum(x[1] for x in _plan_unpaid_months(p))
+                      for p in db().query(MsiPlan).filter(MsiPlan.status == "activo"))
+    L.append(f"Patrimonio consolidado: {_fmt(patrimonio)}. Deuda MSI pendiente: "
+             f"{_fmt(msi_pending)}.")
+
+    # Suscripciones
+    subs = db().query(Subscription).filter(Subscription.status == "activa").all()
+    anual_subs = sum(to_mxn(s.amount, s.currency, tc) *
+                     (12 if s.frequency == "mensual" else 1) for s in subs)
+    if subs:
+        L.append(f"Suscripciones activas ({len(subs)}): {_fmt(anual_subs)} al año. "
+                 "Nombres: " + ", ".join(s.name for s in subs) + ".")
+
+    # Gastos hormiga
+    if ins["gastos_hormiga"]:
+        top = "; ".join(f"{h['description']} ({h['count']} cargos, {_fmt(h['mensual'])}/mes)"
+                        for h in ins["gastos_hormiga"][:6])
+        L.append(f"Gastos hormiga (compras chicas frecuentes) ~"
+                 f"{_fmt(ins['gastos_hormiga_mensual'])}/mes "
+                 f"({_fmt(ins['gastos_hormiga_anual'])}/año). Principales: {top}.")
+
+    # Metas
+    metas = _goals_list()
+    if metas:
+        L.append("Metas: " + "; ".join(
+            f"{m['name']} {m['pct']}% ({_fmt(m['current_amount'])} de {_fmt(m['target_amount'])})"
+            for m in metas) + ".")
+
+    return "\n".join(L)
+
+
+@bp.get("/insights")
+@login_required
+def insights():
+    """Consejos automáticos (gratis, sin IA). Siempre responde."""
+    data = _insights()
+    data["ai_available"] = ai_available()
+    return jsonify(data)
+
+
+@bp.post("/advisor")
+@login_required
+def advisor():
+    """Asesor con IA (Claude): recibe una pregunta, le manda el resumen agregado.
+
+    Nunca envía números de cuenta ni movimientos individuales. Degrada con
+    gracia si no hay API key, no hay red (whitelist de PythonAnywhere) o el SDK
+    no está instalado.
+    """
+    question = (body().get("question") or "").strip()
+    if not question:
+        return err("Escribe una pregunta para el asesor")
+    if not ai_available():
+        return jsonify({
+            "ok": False,
+            "reason": "sin_config",
+            "answer": "El asesor con IA todavía no está activado. Necesita una clave de "
+                      "Anthropic (ANTHROPIC_API_KEY) configurada en el servidor. "
+                      "Mientras tanto, revisa los consejos automáticos de arriba: ya "
+                      "detectan tus gastos hormiga y oportunidades de ahorro sin costo.",
+        })
+    summary = _advisor_summary(_insights())
+    try:
+        answer = ask_advisor(summary, question)
+        return jsonify({"ok": True, "answer": answer})
+    except Exception as e:  # noqa: BLE001 — cualquier fallo se traduce a mensaje amable
+        msg = str(e).lower()
+        if "connection" in msg or "network" in msg or "timeout" in msg or "resolve" in msg:
+            reason, friendly = "sin_red", (
+                "No pude conectarme con la IA. Si estás en el plan gratuito de "
+                "PythonAnywhere, la salida a internet está restringida: hay que pedir "
+                "que habiliten 'api.anthropic.com' o pasar a un plan de pago. Los "
+                "consejos automáticos de arriba sí funcionan sin conexión.")
+        elif "auth" in msg or "api key" in msg or "401" in msg or "invalid" in msg:
+            reason, friendly = "auth", (
+                "La clave de Anthropic no es válida o expiró. Genera una nueva en "
+                "console.anthropic.com y actualízala en el servidor.")
+        elif "module" in msg or "import" in msg or "anthropic" in msg:
+            reason, friendly = "sin_sdk", (
+                "Falta instalar la librería de Anthropic en el servidor "
+                "(pip install anthropic).")
+        else:
+            reason, friendly = "error", (
+                "El asesor con IA tuvo un problema temporal. Intenta de nuevo en un "
+                "momento; los consejos automáticos siguen disponibles.")
+        return jsonify({"ok": False, "reason": reason, "answer": friendly})

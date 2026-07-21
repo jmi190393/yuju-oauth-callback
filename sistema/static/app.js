@@ -406,6 +406,7 @@ function renderMas() {
   $app.innerHTML = `
   <h1>Más</h1>
   <div class="card menu-list" id="menu">
+    <div class="row" data-go="asesor"><div class="l name">🤖 Asesor (ahorro e IA)</div><div>›</div></div>
     <div class="row" data-go="catalogar"><div class="l name">📝 Por catalogar</div><div>›</div></div>
     <div class="row" data-go="comercios"><div class="l name">✏️ Editar categorías</div><div>›</div></div>
     <div class="row" data-go="msi"><div class="l name">📆 Pagos a meses (MSI)</div><div>›</div></div>
@@ -419,12 +420,89 @@ function renderMas() {
   </div>`;
   menu.addEventListener("click", (e) => {
     const r = e.target.closest("[data-go]"); if (!r) return;
-    ({ catalogar: renderPorCatalogar, comercios: renderComercios, msi: renderMsi,
+    ({ asesor: renderAsesor,
+       catalogar: renderPorCatalogar, comercios: renderComercios, msi: renderMsi,
        subs: renderSubs, metas: renderMetas,
        cuentas: renderCuentas, importar: renderImportar, seguridad: renderSeguridad,
        actualizar: renderActualizar,
        salir: async () => { await api("/logout", { method: "POST" }); renderLogin(); } }[r.dataset.go])();
   });
+}
+
+async function renderAsesor() {
+  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  const ins = await api("/insights");
+  const nivel = { bueno: "verde", info: "amarillo", alerta: "rojo" };
+  const sugeridas = [
+    "¿En qué 3 cosas puedo ahorrar sin sufrir?",
+    "¿Cómo elimino mis gastos hormiga este mes?",
+    "¿Cuánto debería apartar al mes para el bebé?",
+    "¿Voy bien para mi fondo de emergencia?",
+  ];
+  $app.innerHTML = `
+  <h1>Asesor</h1>
+  <p class="lead">Consejos automáticos de tus números (gratis) y, si está activado, un
+  asesor con inteligencia artificial para optimizar, ahorrar y cazar gastos hormiga.</p>
+
+  ${ins.gastos_hormiga_mensual > 0 ? `
+  <div class="card">
+    <div class="q">🐜 Gastos hormiga (compras chicas frecuentes)</div>
+    <div class="big">${money(ins.gastos_hormiga_mensual)}<small> / mes</small></div>
+    <div class="sub">≈ ${money(ins.gastos_hormiga_anual)} al año. Este es el goteo que no se
+    siente pero suma — el mejor lugar para empezar a ahorrar.</div>
+  </div>` : ""}
+
+  ${ins.tips.map((t) => `
+  <div class="card">
+    <div class="name" style="font-size:1.02rem">${t.icon} ${esc(t.title)}
+      <span class="pill ${nivel[t.level] || "amarillo"}">${t.level}</span></div>
+    <p class="sub" style="text-align:justify">${esc(t.body)}</p>
+  </div>`).join("")}
+
+  ${ins.gastos_hormiga.length ? `
+  <h2>Dónde se va el goteo</h2>
+  <div class="card">
+    ${ins.gastos_hormiga.map((h) => `
+      <div class="row"><div class="l">
+        <div class="name">${esc(h.description)}</div>
+        <div class="meta">${h.count} cargos · ${money(h.avg)} c/u · ${esc(h.category)}</div>
+      </div><div class="amt">${money(h.mensual)}<div class="meta right">/mes</div></div></div>`).join("")}
+  </div>` : ""}
+
+  <h2>Pregúntale al asesor 🤖</h2>
+  <div class="card">
+    ${ins.ai_available ? "" : `<div class="pill amarillo" style="margin-bottom:10px">
+      IA no activada — se enciende poniendo una clave de Anthropic en el servidor</div>`}
+    <div class="chips" id="sug">
+      ${sugeridas.map((q) => `<button class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join("")}
+    </div>
+    <textarea id="pregunta" rows="2" placeholder="Escribe tu pregunta de dinero…"
+      style="width:100%;margin-top:10px"></textarea>
+    <div class="mt"><button class="btn" id="preguntar">Preguntar</button></div>
+    <div id="respuesta" class="mt"></div>
+    <p class="meta" style="margin-top:14px;text-align:justify">Solo se comparte un resumen
+    agregado de tus números (totales y categorías) — nunca números de cuenta ni movimientos
+    individuales. Es una ayuda para organizar decisiones, no sustituye a un asesor
+    financiero o fiscal profesional.</p>
+  </div>`;
+
+  const ta = document.getElementById("pregunta");
+  document.getElementById("sug").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-q]"); if (!b) return;
+    ta.value = b.dataset.q; ta.focus();
+  });
+  document.getElementById("preguntar").onclick = async () => {
+    const q = ta.value.trim();
+    const out = document.getElementById("respuesta");
+    if (!q) { out.innerHTML = `<div class="sub">Escribe una pregunta primero.</div>`; return; }
+    out.innerHTML = `<div class="loading">Pensando…</div>`;
+    try {
+      const r = await api("/advisor", { method: "POST", body: { question: q } });
+      out.innerHTML = `<div class="answer ${r.ok ? "" : "muted"}">${esc(r.answer).replace(/\n/g, "<br>")}</div>`;
+    } catch (e) {
+      out.innerHTML = `<div class="answer muted">${esc(e.message)}</div>`;
+    }
+  };
 }
 
 async function renderMsi() {

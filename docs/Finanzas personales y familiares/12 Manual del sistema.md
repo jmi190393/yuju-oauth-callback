@@ -1,4 +1,4 @@
-# 12 · Manual del sistema (Fase 1 MVP · v1.4)
+# 12 · Manual del sistema (Fase 1 MVP · v1.5)
 
 El sistema vive en la carpeta `sistema/` del repositorio. Es una **PWA** (se instala en el celular desde el navegador), en español, con login para Jaime y Nurit. **Desplegado en la nube en PythonAnywhere**: `https://jmi190393.pythonanywhere.com`.
 
@@ -37,7 +37,13 @@ Cuando importas, el sistema clasifica solo lo que reconoce. Lo que NO sabe queda
 ### ✏️ Editar categorías (reclasificar cuando quieras)
 En **Más → Editar categorías**: busca cualquier comercio, ve su categoría actual y cámbiala. Se actualizan **todos** sus movimientos y el sistema reaprende.
 
+### 🤖 Asesor (ahorro e IA)
+En **Más → Asesor**. Dos partes complementarias:
+- **Consejos automáticos** (gratis, siempre funcionan, sin internet): detectan tus **gastos hormiga** (compras chicas y frecuentes del mismo comercio — p. ej. varios Uber Eats — con su equivalente mensual y anual), el costo anual de suscripciones, cuántos meses te faltan para el fondo de emergencia con tu sobrante actual, el mes más pesado de MSI y la concentración de riesgo en instrumentos volátiles.
+- **Pregúntale al asesor (IA)**: un chat con Claude para optimizar, ahorrar y decidir metas. Trae preguntas sugeridas ("¿En qué 3 cosas puedo ahorrar sin sufrir?"). **Solo se le comparte un resumen agregado** (totales y categorías) — nunca números de cuenta ni movimientos individuales. Es una ayuda, no sustituye a un asesor profesional. Se activa poniendo una clave de Anthropic en el servidor (ver [[14 Despliegue en PythonAnywhere]] · Paso 7); si no está, el chat lo avisa y los consejos automáticos siguen disponibles.
+
 ### ☰ Más
+- **Asesor**: consejos automáticos de ahorro + chat con IA
 - **Por catalogar**: gastos que el sistema no supo clasificar (te pregunta y aprende)
 - **Editar categorías**: reclasificar cualquier comercio cuando quieras
 - **MSI**: planes activos + flujo comprometido de los próximos 6 meses

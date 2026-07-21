@@ -49,6 +49,28 @@ from wsgi import application
 - Pantalla de error → pestaña Web → **Error log** (las últimas líneas dicen la causa). Mándame ese texto y lo resuelvo.
 - La cuenta gratuita "duerme" la app cada 3 meses: PythonAnywhere manda un correo con un botón **"Run until 3 months from today"** — solo hay que presionarlo cuando llegue.
 
+## Paso 7 (opcional) — Encender el asesor con IA
+El **Asesor** (Más → Asesor) tiene dos partes:
+- **Consejos automáticos** (gastos hormiga, suscripciones, fondo de emergencia, MSI, riesgo): **gratis y siempre funcionan**, sin configurar nada.
+- **Asesor con IA** (chat con Claude): requiere una clave de Anthropic. Si no la pones, el chat lo dice amablemente y los consejos automáticos siguen ahí.
+
+Para activarlo:
+1. Crea una clave en **console.anthropic.com** → *API Keys* → *Create Key* (empieza con `sk-ant-…`).
+2. En el **WSGI configuration file** (el mismo del Paso 4), agrega esta línea **antes** de `from wsgi import application`:
+```python
+import os
+os.environ["ANTHROPIC_API_KEY"] = "sk-ant-TU-CLAVE-AQUI"
+```
+3. Instala la librería en la consola Bash: `pip3 install --user anthropic`.
+4. **Reload** en la pestaña Web.
+
+> [!warning] Salida a internet en el plan gratuito
+> PythonAnywhere **gratuito** solo deja salir a una lista blanca de sitios; `api.anthropic.com` **no** está en ella por defecto, así que el chat con IA puede fallar con "No pude conectarme". Dos caminos:
+> 1. **Plan de pago** ($5 USD/mes, "Hacker") — quita esa restricción y la IA funciona.
+> 2. Pedir a PythonAnywhere que agregue `api.anthropic.com` a tu whitelist (a veces lo hacen para APIs conocidas).
+>
+> Mientras tanto, los **consejos automáticos del Asesor no usan internet** y funcionan igual. El costo de la IA es por uso (unos centavos por pregunta); ronda ~$0 con uso normal.
+
 ## Mantenimiento
 - **Respaldo**: el archivo `~/sistema/finanzas.db` ES toda la base de datos. Descargarlo de vez en cuando (Files → sistema → finanzas.db → download).
 - **Actualizaciones del sistema**: cuando yo publique mejoras, te paso el ZIP nuevo; se repiten los pasos 1–2 y Reload (la base de datos no se toca).

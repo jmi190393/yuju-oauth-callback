@@ -263,6 +263,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .chip:active { transform: scale(.95); }
 .chip.sel { background: var(--brand); color: #fff; border-color: var(--brand); }
 
+/* Respuesta del asesor con IA */
+.answer {
+  background: var(--surface-2); border: 1.5px solid var(--line);
+  border-radius: var(--r-md, 14px); padding: 14px 16px;
+  line-height: 1.6; text-align: justify; hyphens: auto;
+  font-size: .95rem;
+}
+.answer.muted { color: var(--muted); }
+
 /* ---------- Barra de pestañas ---------- */
 .tabbar {
   position: fixed; inset: auto 0 0 0; z-index: 40;
