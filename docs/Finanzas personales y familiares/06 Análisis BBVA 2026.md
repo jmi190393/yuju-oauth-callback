@@ -13,10 +13,13 @@ El dinero entra, y de ahí se reparte a 4 destinos: **inversión (GBM), pago de 
 | **Total neto mensual** | **≈ $195,156** | Consistente los 7 meses |
 | Mensualidad entrante (venta a 36 pagos, va 29/36) | $160 | Mensual — quedan ~7 pagos |
 
+> [!important] Corrección (con datos de Revolut, ver [[07 Análisis Revolut 2026]])
+> La CLABE STP "mio" que aquí se clasificó como "inversión GBM" resultó ser la **cuenta Revolut**. Los $797k enviados fueron traspasos a Revolut; desde ahí se repartieron a eToro ($150k), GBM ($100k), Banorte ($270k) y al fondo de rendimiento diario de Revolut (saldo $238k al 30/jun).
+
 ## A dónde se fue el dinero (7 periodos)
 | Destino | Total | Promedio/mes |
 |---|---|---|
-| 📈 Inversión GBM (neto: envió $797k, regresó $217k) | **$580,000** | ~$82,900 |
+| 📈 Traspasos a Revolut (neto; ver corrección arriba) | **$580,000** | ~$82,900 |
 | 💳 Pago Amex A (…3008) | $576,612 | ~$96,000/mes en 2026 |
 | 👨‍👩‍👦 Familia (donativo $500k dic + préstamo mamá $40k) | $540,000 | — (extraordinario) |
 | 🏠 Mantenimiento "Serena 506" | $142,269 | **$21,798.61** fijo |
@@ -41,7 +44,7 @@ El dinero entra, y de ahí se reparte a 4 destinos: **inversión (GBM), pago de 
 - Kenai: ~$400–750 semanal
 
 ## 🚨 Señales que el sistema habría alertado
-1. **Colchón en ceros**: el saldo pasó de $995k (dic) a **$6,496 el 14/jul**. Todo se invierte o gasta — disciplina de inversión excelente, pero **no existe fondo de emergencia líquido**. Con bebé en camino, es la meta #1.
+1. **Colchón en ceros… en BBVA**: el saldo pasó de $995k (dic) a **$6,496 el 14/jul**. *Corrección con datos de Revolut:* sí existe reserva líquida — **$237,763 en Revolut Inversión** — pero era invisible desde BBVA. La meta pasa de "crear fondo de emergencia" a "formalizarlo y dimensionarlo" (con bebé en camino: 3–6 meses de gasto ≈ $450–900k).
 2. **2/3 del gasto es invisible desde BBVA**: los ~$96k/mes de Amex A son una caja negra hasta subir esos estados. *(Amex A …3008 y Amex B …1000 — confirmar cuál es Gold y cuál Platinum.)*
 3. **FANFIX.IO $198.09** (20/ene, cargo en USD a la tarjeta de débito): cargo tipo suscripción — ¿lo reconoces?
 4. El pico de **$73,886 en Amex B (jun)** merece explicación (¿seguro anual? ¿compra grande a MSI?).
