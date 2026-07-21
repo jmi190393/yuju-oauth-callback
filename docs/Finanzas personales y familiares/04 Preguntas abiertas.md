@@ -10,7 +10,7 @@
 4. **Canal del bot**: **WhatsApp**.
 5. ~~¿Revolut tiene MSI?~~ → SÍ: 30 planes a 3 meses 0% en 2026 (corregido en [[07 Análisis Revolut 2026]]).
 
-## 📋 Preguntas acumuladas (hacer todas al final)
+## 📋 Preguntas acumuladas — 📨 ENTREGADAS al usuario el 2026-07-21 (esperando respuestas)
 
 ### Urgente / accionable
 - [ ] ⚠️ ¿Ya se pagaron los **$30,902.42** de la TDC Revolut? (fecha límite: 20/jul/2026)
@@ -29,8 +29,8 @@
 - [ ] ¿A quién fueron los **$270,000 a Banorte el 26/feb**? (en dic salieron $500k a Banorte, "donativo" a Moisés)
 - [ ] ¿La tarjeta adicional ****0870 es de Nurit?
 - [ ] Claude $3,477.96 (abr): ¿plan anual o mensual? · Nutrafol $3,576.87: ¿suscripción recurrente? · OpenAI $110/mes cesó en marzo: ¿cancelada?
-- [ ] ¿El pico de $73,886 en Amex B (jun) y el plan fijo de $9,289.34/mes en Amex — qué son? (se verá con estados Amex)
-- [ ] ¿Cuánto hay HOY en eToro, GBM y Cetes? (desde Revolut entraron $149,990 a eToro y $100,000 a GBM en 2026)
+- [x] ~~¿El pico de $73,886 en Amex B (jun)?~~ ✅ resuelto: mensualidades del MSI automático Bupa+KLM en Platinum; el fijo $9,289.34 eran mensualidades de planes MSI previos
+- [x] ~~¿Cuánto hay HOY en eToro, GBM y Cetes?~~ ✅ resuelto con estados: eToro USD $86,713 · GBM+ USD $10,609 · Cetes $56,277
 - [ ] ¿Viaje a Reino Unido en puerta? (pagó ETA UK el 8/jun) — para presupuestarlo
 
 ### Del análisis Amex

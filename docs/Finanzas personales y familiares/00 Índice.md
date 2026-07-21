@@ -17,6 +17,7 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 - [[08 Análisis Amex 2026]] — Gold + Platinum: gasto real, portafolio MSI, calendario de seguros, gastos del bebé.
 - [[09 Análisis Inversiones]] — Cetes, Revolut Inversión, eToro; falta el contrato real de GBM.
 - [[10 Análisis Banamex 2026]] — Solo domicilia CFE y gas; anualidad $1,427 → cancelarla es correcto (migrando domiciliaciones).
+- [[11 Resumen ejecutivo 2026]] — La foto completa: ingresos, gasto real, MSI, seguros, patrimonio y diagnóstico.
 
 ## Estado del proyecto
 
@@ -25,4 +26,6 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 | Cuestionario | ✅ Completo (2026-07-19) |
 | Decisiones de diseño | ✅ Cerradas (2026-07-19) |
 | Estados de cuenta | ✅ COMPLETO (10 instituciones): BBVA · Revolut ×2 · Amex ×2 · Cetes · eToro · GBM ×2 · Banamex · Safra |
-| Construcción MVP | ⏸ Lista para iniciar |
+| Resumen ejecutivo | ✅ Entregado (2026-07-21) |
+| Cuestionario final | 📨 Entregado al usuario (2026-07-21) — esperando respuestas |
+| Construcción MVP | ⏸ Arranca al recibir respuestas |
