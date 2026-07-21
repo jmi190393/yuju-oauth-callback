@@ -145,6 +145,31 @@ function catChips(cats) {
     + `<button class="chip" data-new="1" style="border-style:dashed">➕ Otra…</button>`;
 }
 
+// Selector reutilizable: muestra chips en `slot`; al elegir, asigna al comercio,
+// aprende, y deja un estado "✅ En X · Cambiar" para rectificar cuando quieras.
+function mountCategoryPicker(slot, desc, { override = false } = {}) {
+  slot.innerHTML = `<div class="chips">${catChips(state.categories)}</div>`;
+  slot.querySelectorAll(".chip").forEach((chip) => chip.onclick = async () => {
+    try {
+      let catId = chip.dataset.cat;
+      if (chip.dataset.new) {
+        const name = (prompt("Nombre de la nueva categoría (ej. Ropa):") || "").trim();
+        if (!name) return;
+        const nc = await api("/categories", { method: "POST", body: { name } });
+        await refreshCategories();
+        catId = nc.id;
+        if (nc.created) toast(`Categoría "${name}" creada ✅`);
+      }
+      await api("/categorize-merchant", { method: "POST", body: {
+        description: desc, category_id: +catId, remember: true, override } });
+      const cat = state.categories.find((c) => c.id === +catId);
+      slot.innerHTML = `<div class="sub">✅ En <b>${cat ? cat.emoji + " " + esc(cat.name) : "categoría"}</b> · <a class="chg">Cambiar</a></div>`;
+      slot.querySelector(".chg").onclick = () => mountCategoryPicker(slot, desc, { override: true });
+      toast("Guardado ✅");
+    } catch (e) { toast(e.message); }
+  });
+}
+
 async function renderPorCatalogar() {
   $app.innerHTML = `<div class="loading">Cargando…</div>`;
   const grupos = await api("/uncategorized");
@@ -162,39 +187,43 @@ async function renderPorCatalogar() {
   }
   $app.innerHTML = `
   <h1>Por catalogar (${grupos.length})</h1>
-  <p class="sub" style="margin:0 4px 12px">Toca la categoría de cada comercio (o <b>➕ Otra…</b> para crear una nueva, ej. Ropa). El sistema lo recuerda y ya no vuelve a preguntar.</p>
+  <p class="sub" style="margin:0 4px 12px">Toca la categoría de cada comercio (o <b>➕ Otra…</b> para crear una nueva). Si te equivocas, usa <b>Cambiar</b>. El sistema lo recuerda y ya no vuelve a preguntar.</p>
   <div id="glist">${grupos.map((gp) => `
     <div class="card" data-desc="${esc(gp.description)}">
       <div class="name">${gp.direction === "abono" ? "＋ " : ""}${esc(gp.description)}</div>
       <div class="meta">${gp.count} movimiento(s) · ${money(gp.total)}</div>
-      <div class="chips">${catChips(state.categories)}</div>
+      ${gp.refs ? `<div class="meta" style="opacity:.85">📎 ${esc(gp.refs)}</div>` : ""}
+      <div class="slot"></div>
     </div>`).join("")}</div>
   <div class="mt"><button class="btn-line btn-block" id="cleanup">🧹 Quitar categorías que no uso</button></div>`;
-
-  const assign = async (card, catId) => {
-    const r = await api("/categorize-merchant", { method: "POST", body: {
-      description: card.dataset.desc, category_id: +catId, remember: true } });
-    card.querySelector(".chips").outerHTML = `<div class="sub">✅ ${r.updated} catalogado(s) y recordado</div>`;
-    card.style.opacity = ".55";
-    toast("Aprendido ✅");
-  };
-  $app.querySelectorAll(".card[data-desc]").forEach((card) => {
-    card.querySelectorAll(".chip").forEach((chip) => chip.onclick = async () => {
-      try {
-        if (chip.dataset.new) {
-          const name = (prompt("Nombre de la nueva categoría (ej. Ropa):") || "").trim();
-          if (!name) return;
-          const nc = await api("/categories", { method: "POST", body: { name } });
-          await refreshCategories();
-          await assign(card, nc.id);
-          toast(nc.created ? `Categoría "${name}" creada ✅` : "Aprendido ✅");
-        } else {
-          await assign(card, chip.dataset.cat);
-        }
-      } catch (e) { toast(e.message); }
-    });
-  });
+  $app.querySelectorAll(".card[data-desc]").forEach((card) =>
+    mountCategoryPicker(card.querySelector(".slot"), card.dataset.desc, { override: false }));
   document.getElementById("cleanup").onclick = doCleanup;
+}
+
+async function renderComercios() {
+  $app.innerHTML = `
+  <h1>Editar categorías</h1>
+  <p class="sub" style="margin:0 4px 12px">Busca cualquier comercio y cambia su categoría. Se actualizan todos sus movimientos y el sistema reaprende.</p>
+  <div class="card"><input id="mq" placeholder="Busca un comercio… (ej. Uber, Amazon)"></div>
+  <div id="mlist"><div class="loading">Cargando…</div></div>`;
+  let deb;
+  mq.oninput = () => { clearTimeout(deb); deb = setTimeout(load, 300); };
+  async function load() {
+    const q = mq.value.trim();
+    const items = await api("/merchants" + (q ? "?q=" + encodeURIComponent(q) : ""));
+    document.getElementById("mlist").innerHTML = items.length ? items.map((m) => `
+      <div class="card" data-desc="${esc(m.description)}">
+        <div class="name">${esc(m.description)}</div>
+        <div class="meta">${m.count} mov · ${money(m.total)} · ahora: ${m.category_emoji} ${esc(m.category)}</div>
+        <div class="slot"><a class="chg">Cambiar categoría ›</a></div>
+      </div>`).join("") : '<div class="card"><div class="sub">Sin resultados.</div></div>';
+    document.querySelectorAll("#mlist .card[data-desc]").forEach((card) => {
+      const link = card.querySelector(".chg");
+      if (link) link.onclick = () => mountCategoryPicker(card.querySelector(".slot"), card.dataset.desc, { override: true });
+    });
+  }
+  load();
 }
 
 async function doCleanup() {
@@ -290,6 +319,7 @@ async function renderMovs(filters = {}) {
       <div class="row" data-id="${t.id}"><div class="l">
         <div class="name">${t.category_emoji} ${esc(t.description)}</div>
         <div class="meta">${fdate(t.date)} · ${esc(t.account)} · ${esc(t.category || "sin categoría")}${t.tags ? " · " + esc(t.tags) : ""}</div>
+        ${t.notes ? `<div class="meta" style="opacity:.85">📎 ${esc(t.notes)}</div>` : ""}
       </div>
       <div class="amt ${t.direction === "abono" ? "pos" : ""}">${t.direction === "abono" ? "+" : "−"}${money(t.amount)}</div>
       </div>`).join("") || '<div class="sub">Sin movimientos con este filtro.</div>'}
@@ -307,6 +337,7 @@ function editTxn(t, done) {
   <div class="card">
     <div class="big">${t.direction === "abono" ? "+" : "−"}${money(t.amount)}</div>
     <div class="sub">${esc(t.description)} · ${fdate(t.date)} · ${esc(t.account)}</div>
+    ${t.notes ? `<div class="sub">📎 Referencia: ${esc(t.notes)}</div>` : ""}
     <label>Categoría</label>
     <select id="ecat">
       <option value="">— sin categoría —</option>
@@ -374,6 +405,7 @@ function renderMas() {
   <h1>Más</h1>
   <div class="card menu-list" id="menu">
     <div class="row" data-go="catalogar"><div class="l name">📝 Por catalogar</div><div>›</div></div>
+    <div class="row" data-go="comercios"><div class="l name">✏️ Editar categorías</div><div>›</div></div>
     <div class="row" data-go="msi"><div class="l name">📆 Pagos a meses (MSI)</div><div>›</div></div>
     <div class="row" data-go="subs"><div class="l name">🔁 Suscripciones</div><div>›</div></div>
     <div class="row" data-go="metas"><div class="l name">🎯 Metas</div><div>›</div></div>
@@ -385,7 +417,8 @@ function renderMas() {
   </div>`;
   menu.addEventListener("click", (e) => {
     const r = e.target.closest("[data-go]"); if (!r) return;
-    ({ catalogar: renderPorCatalogar, msi: renderMsi, subs: renderSubs, metas: renderMetas,
+    ({ catalogar: renderPorCatalogar, comercios: renderComercios, msi: renderMsi,
+       subs: renderSubs, metas: renderMetas,
        cuentas: renderCuentas, importar: renderImportar, seguridad: renderSeguridad,
        actualizar: renderActualizar,
        salir: async () => { await api("/logout", { method: "POST" }); renderLogin(); } }[r.dataset.go])();
