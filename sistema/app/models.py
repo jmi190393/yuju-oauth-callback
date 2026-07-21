@@ -144,3 +144,15 @@ class Setting(Base):
     __tablename__ = "settings"
     key: Mapped[str] = mapped_column(String(50), primary_key=True)
     value: Mapped[str] = mapped_column(Text)
+
+
+class Rule(Base):
+    """Regla de categorización aprendida de las correcciones del usuario.
+
+    pattern: descripción del comercio normalizada (mayúsculas, espacios simples).
+    Se aplica por contención: si `pattern` está en la descripción normalizada.
+    """
+    __tablename__ = "rules"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    pattern: Mapped[str] = mapped_column(String(200), unique=True)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))

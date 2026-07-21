@@ -63,8 +63,13 @@ RULES: list[tuple[str, str, str]] = [
 _COMPILED = [(re.compile(p), cat, tags) for p, cat, tags in RULES]
 
 
+def normalize(s: str) -> str:
+    """Clave de comercio: mayúsculas y espacios simples, para comparar reglas."""
+    return " ".join((s or "").upper().split())
+
+
 def categorize(description: str, detail: str = "") -> tuple[str | None, str]:
-    """Devuelve (nombre_categoria, tags) o (None, '')."""
+    """Devuelve (nombre_categoria, tags) o (None, '') según las reglas base."""
     text = f"{description} {detail}".upper()
     for rx, cat, tags in _COMPILED:
         if rx.search(text):

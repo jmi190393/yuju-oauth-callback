@@ -12,14 +12,21 @@ from sqlalchemy.orm import joinedload
 
 from .auth import (COOKIE, current_user_id, hash_password, login_required,
                    make_token, verify_password)
-from .categorizer import categorize
+from .categorizer import categorize, normalize
 from .importers import detect_and_parse
 from .models import (Account, Category, Goal, ImportBatch, MsiPlan, Provision,
-                     Setting, Subscription, Transaction, User)
+                     Rule, Setting, Subscription, Transaction, User)
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
+APP_VERSION = "1.1"
 GASTO_KINDS = ("fijo", "variable", "aprovisionamiento")
+
+
+@bp.get("/version")
+@login_required
+def version():
+    return jsonify({"version": APP_VERSION})
 
 
 # ---------- helpers ----------
@@ -48,6 +55,21 @@ def _tc_usd():
 def to_mxn(amount, currency, tc):
     """Convierte a MXN; los saldos/importes en USD usan el tipo de cambio."""
     return amount * (tc if currency == "USD" else 1)
+
+
+def _learned_rules():
+    """(pattern, category_id) de las reglas aprendidas del usuario."""
+    return [(r.pattern, r.category_id) for r in db().query(Rule)]
+
+
+def _resolve_category(desc, detail, cat_by_name, learned):
+    """Categoría de un movimiento: reglas aprendidas (ganan) → reglas base."""
+    norm = normalize(desc)
+    for pat, cid in learned:
+        if pat and pat in norm:
+            return cid, ""
+    name, tags = categorize(desc, detail)
+    return cat_by_name.get(name), tags
 
 
 def _month_bounds(month: str):
@@ -219,11 +241,9 @@ def create_transaction():
     tags = data.get("tags", "")
     desc = data.get("description", "")
     if not category_id and desc:
-        cat_name, auto_tags = categorize(desc)
-        if cat_name:
-            cat = db().query(Category).filter(Category.name == cat_name).first()
-            category_id = cat.id if cat else None
-            tags = tags or auto_tags
+        cat_by_name = {c.name: c.id for c in db().query(Category)}
+        category_id, auto_tags = _resolve_category(desc, "", cat_by_name, _learned_rules())
+        tags = tags or auto_tags
     t = Transaction(
         account_id=account_id,
         date=date.fromisoformat(data["date"]) if data.get("date") else date.today(),
@@ -502,9 +522,11 @@ def dashboard():
                    for a in db().query(Account).filter(Account.in_networth, Account.active))
     msi_pending = sum(sum(x[1] for x in _plan_unpaid_months(p))
                       for p in db().query(MsiPlan).filter(MsiPlan.status == "activo"))
+    por_catalogar = db().query(func.count(Transaction.id)).filter(
+        Transaction.category_id.is_(None), Transaction.direction == "cargo").scalar() or 0
     umbral = 0.8 * (b["fijos_plan"] + b["variables_plan"] + b["aprovisionamiento"])
     return jsonify({
-        "hoy": today.isoformat(), "usuario": g.user.name,
+        "hoy": today.isoformat(), "usuario": g.user.name, "por_catalogar": por_catalogar,
         "cuanto_tengo": {"liquido": round(liquid, 2)},
         "como_voy": {"ingreso": b["ingreso"], "gasto_real": b["gasto_real"],
                      "sobrante_plan": b["sobrante_plan"],
@@ -553,17 +575,21 @@ def import_statement():
         return err(f"No hay cuenta configurada para {hint['institution']} {hint['kind']}")
 
     cat_by_name = {c.name: c.id for c in db().query(Category)}
+    learned = _learned_rules()
     n_new = n_skip = 0
     for t in parsed["transactions"]:
         key = _txn_key(account.id, t["date"], t["description"], t["amount"], t["direction"])
         if db().query(Transaction.id).filter(Transaction.external_key == key).first():
             n_skip += 1
             continue
-        cat_name, tags = categorize(t["description"], t.get("detail", ""))
+        category_id, tags = _resolve_category(t["description"], t.get("detail", ""), cat_by_name, learned)
+        # Revolut crédito solo se usa en viajes (fuera de México): default = Viajes.
+        if category_id is None and parsed["bank"] == "revolut_credito" and t["direction"] == "cargo":
+            category_id, tags = cat_by_name.get("Viajes"), tags or "viaje"
         db().add(Transaction(
             account_id=account.id, date=date.fromisoformat(t["date"]),
             description=t["description"], amount=t["amount"], direction=t["direction"],
-            category_id=cat_by_name.get(cat_name), tags=tags, source="import",
+            category_id=category_id, tags=tags, source="import",
             external_key=key, notes=t.get("detail", "")[:300], created_by=g.user.id))
         n_new += 1
 
@@ -620,15 +646,57 @@ def import_statement():
 @login_required
 def recategorize():
     cat_by_name = {c.name: c.id for c in db().query(Category)}
+    learned = _learned_rules()
     n = 0
     for t in db().query(Transaction).filter(Transaction.category_id.is_(None)):
-        cat_name, tags = categorize(t.description, t.notes or "")
-        if cat_name:
-            t.category_id = cat_by_name.get(cat_name)
+        cid, tags = _resolve_category(t.description, t.notes or "", cat_by_name, learned)
+        if cid:
+            t.category_id = cid
             t.tags = t.tags or tags
             n += 1
     db().commit()
     return jsonify({"recategorized": n})
+
+
+@bp.get("/uncategorized")
+@login_required
+def uncategorized():
+    """Gastos sin categoría, agrupados por comercio (los de mayor monto primero).
+
+    Solo cargos: es un sistema de gastos, los depósitos/transferencias entrantes
+    no ensucian la cola. Se puede incluir todo con ?all=1.
+    """
+    query = db().query(Transaction.description, Transaction.direction,
+                       func.count(Transaction.id), func.sum(Transaction.amount)) \
+        .filter(Transaction.category_id.is_(None))
+    if request.args.get("all") != "1":
+        query = query.filter(Transaction.direction == "cargo")
+    rows = (query.group_by(Transaction.description, Transaction.direction)
+            .order_by(func.sum(Transaction.amount).desc()).all())
+    return jsonify([{"description": d, "direction": dir_, "count": c, "total": round(t or 0, 2)}
+                    for d, dir_, c, t in rows])
+
+
+@bp.post("/categorize-merchant")
+@login_required
+def categorize_merchant():
+    """Asigna categoría a TODOS los movimientos de un comercio y (opcional) la recuerda."""
+    data = body()
+    desc, cid = data.get("description"), data.get("category_id")
+    if not desc or not cid:
+        return err("Falta el comercio o la categoría")
+    n = (db().query(Transaction)
+         .filter(Transaction.category_id.is_(None), Transaction.description == desc)
+         .update({"category_id": cid, "tags": data.get("tags", "")}, synchronize_session=False))
+    if data.get("remember", True):
+        pat = normalize(desc)
+        rule = db().query(Rule).filter(Rule.pattern == pat).first()
+        if rule:
+            rule.category_id = cid
+        else:
+            db().add(Rule(pattern=pat, category_id=cid))
+    db().commit()
+    return jsonify({"updated": n})
 
 
 @bp.get("/imports")

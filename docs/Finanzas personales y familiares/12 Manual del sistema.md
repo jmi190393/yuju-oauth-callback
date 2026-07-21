@@ -24,7 +24,11 @@ Todos los movimientos (manuales + importados), filtro por mes y búsqueda. Tocar
 ### 📊 Plan (presupuesto)
 La **regla del sobrante** en vivo: ingreso − fijos − aprovisionamiento − MSI del mes − variables = sobrante invertible. Cada categoría con barra y semáforo (verde ≤80%, amarillo ≤100%, rojo excedido).
 
+### 📝 Por catalogar (el catálogo asistido)
+Cuando importas, el sistema clasifica solo lo que reconoce. Lo que NO sabe queda en **Por catalogar** (aparece en Inicio con un contador y en Más). Ahí ves cada comercio agrupado, de mayor a menor monto, y le tocas su categoría. **El sistema lo recuerda**: la próxima vez que aparezca ese comercio, lo clasifica solo. Así, mes a mes, casi todo queda automático.
+
 ### ☰ Más
+- **Por catalogar**: gastos que el sistema no supo clasificar (te pregunta y aprende)
 - **MSI**: planes activos + flujo comprometido de los próximos 6 meses
 - **Suscripciones**: costo anual total + estado (activa/por confirmar/cancelada)
 - **Metas**: progreso y actualización de montos

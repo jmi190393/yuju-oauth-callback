@@ -87,6 +87,12 @@ async function renderInicio() {
   $app.innerHTML = `
   <h1>Hola, ${esc(d.usuario)} 👋</h1>
 
+  ${d.por_catalogar ? `<div class="card" style="border-color:var(--brand)">
+    <div class="q">📝 Movimientos por catalogar</div>
+    <div class="big">${d.por_catalogar}</div>
+    <div class="sub">El sistema no supo su categoría. <a id="gocat">Revisar y enseñarle ›</a></div>
+  </div>` : ""}
+
   <div class="card">
     <div class="q">¿Cuánto tengo? (líquido)</div>
     <div class="big">${money(d.cuanto_tengo.liquido)}</div>
@@ -123,6 +129,38 @@ async function renderInicio() {
     <div class="big">${money(nw.patrimonio_mxn)}</div>
     <div class="sub">Patrimonio líquido/invertido (USD a $${nw.tc_usd}) − MSI pendiente ${money(nw.msi_pendiente)}</div>
   </div>`;
+  const gc = document.getElementById("gocat");
+  if (gc) gc.onclick = renderPorCatalogar;
+}
+
+async function renderPorCatalogar() {
+  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  const grupos = await api("/uncategorized");
+  const cats = state.categories.filter((c) => c.kind !== "ingreso");
+  if (!grupos.length) {
+    $app.innerHTML = `<h1>Por catalogar</h1><div class="card"><div class="sub">🎉 ¡Todo catalogado! No hay movimientos pendientes.</div></div>`;
+    return;
+  }
+  $app.innerHTML = `
+  <h1>Por catalogar (${grupos.length})</h1>
+  <p class="sub" style="margin:0 4px 12px">Toca la categoría de cada comercio. El sistema lo recordará y ya no volverá a preguntar por ese comercio.</p>
+  <div id="glist">${grupos.map((gp) => `
+    <div class="card" data-desc="${esc(gp.description)}">
+      <div class="name">${gp.direction === "abono" ? "＋ " : ""}${esc(gp.description)}</div>
+      <div class="meta">${gp.count} movimiento(s) · ${money(gp.total)}</div>
+      <div class="chips">${cats.map((c) => `<button class="chip" data-cat="${c.id}">${c.emoji} ${esc(c.name)}</button>`).join("")}</div>
+    </div>`).join("")}</div>`;
+  $app.querySelectorAll(".card[data-desc]").forEach((card) => {
+    card.querySelectorAll(".chip").forEach((chip) => chip.onclick = async () => {
+      try {
+        const r = await api("/categorize-merchant", { method: "POST", body: {
+          description: card.dataset.desc, category_id: +chip.dataset.cat, remember: true } });
+        card.querySelector(".chips").outerHTML = `<div class="sub">✅ ${r.updated} catalogado(s) y recordado</div>`;
+        card.style.opacity = ".55";
+        toast("Aprendido ✅");
+      } catch (e) { toast(e.message); }
+    });
+  });
 }
 
 /* ---------- captura rápida ---------- */
@@ -291,18 +329,21 @@ function renderMas() {
   $app.innerHTML = `
   <h1>Más</h1>
   <div class="card menu-list" id="menu">
+    <div class="row" data-go="catalogar"><div class="l name">📝 Por catalogar</div><div>›</div></div>
     <div class="row" data-go="msi"><div class="l name">📆 Pagos a meses (MSI)</div><div>›</div></div>
     <div class="row" data-go="subs"><div class="l name">🔁 Suscripciones</div><div>›</div></div>
     <div class="row" data-go="metas"><div class="l name">🎯 Metas</div><div>›</div></div>
     <div class="row" data-go="cuentas"><div class="l name">🏦 Cuentas y patrimonio</div><div>›</div></div>
     <div class="row" data-go="importar"><div class="l name">📥 Importar estado de cuenta</div><div>›</div></div>
     <div class="row" data-go="seguridad"><div class="l name">🔒 Seguridad</div><div>›</div></div>
+    <div class="row" data-go="actualizar"><div class="l name">⬆️ Actualizar programa</div><div>›</div></div>
     <div class="row" data-go="salir"><div class="l name">👋 Cerrar sesión</div><div>›</div></div>
   </div>`;
   menu.addEventListener("click", (e) => {
     const r = e.target.closest("[data-go]"); if (!r) return;
-    ({ msi: renderMsi, subs: renderSubs, metas: renderMetas, cuentas: renderCuentas,
-       importar: renderImportar, seguridad: renderSeguridad,
+    ({ catalogar: renderPorCatalogar, msi: renderMsi, subs: renderSubs, metas: renderMetas,
+       cuentas: renderCuentas, importar: renderImportar, seguridad: renderSeguridad,
+       actualizar: renderActualizar,
        salir: async () => { await api("/logout", { method: "POST" }); renderLogin(); } }[r.dataset.go])();
   });
 }
@@ -404,29 +445,42 @@ async function renderCuentas() {
 
 async function renderImportar() {
   $app.innerHTML = `
-  <h1>Importar estado de cuenta</h1>
+  <h1>Importar estados de cuenta</h1>
   <div class="card">
-    <p class="sub">Sube el PDF del estado (BBVA, Revolut crédito, Amex Gold/Platinum) o el CSV de Revolut débito. El sistema detecta el banco, concilia contra los totales oficiales y categoriza solo.</p>
-    <label class="mt">Archivo</label>
-    <input id="ifile" type="file" accept=".pdf,.csv">
+    <p class="sub">Sube <b>uno o varios archivos a la vez</b>: PDF de BBVA, Amex Gold/Platinum o Revolut crédito, y el CSV de Revolut débito. El sistema detecta cada banco, concilia contra los totales oficiales y cataloga solo.</p>
+    <label class="mt">Archivos (puedes seleccionar varios)</label>
+    <input id="ifile" type="file" accept=".pdf,.csv" multiple>
     <div class="mt"><button class="btn-block" id="igo">Importar</button></div>
     <div id="ires"></div>
   </div>
   <h2>Historial</h2>
   <div class="card" id="ihist"><div class="sub">Cargando…</div></div>`;
   igo.onclick = async () => {
-    if (!ifile.files.length) { toast("Elige un archivo"); return; }
-    igo.disabled = true; ires.innerHTML = '<div class="sub mt">Procesando…</div>';
-    const fd = new FormData(); fd.append("file", ifile.files[0]);
-    try {
-      const r = await api("/import", { method: "POST", body: fd });
-      ires.innerHTML = `<div class="sub mt">
-        ✅ <b>${esc(r.account)}</b> · periodo ${r.period[0]} → ${r.period[1]}<br>
-        ${r.imported} nuevos · ${r.skipped} ya existían · ${r.msi_plans_new} planes MSI nuevos<br>
-        Conciliación: <b>${r.reconciled === false ? "⚠️ NO cuadra — revisar" : "al centavo ✅"}</b>
-        ${r.pago_requerido ? `<br>💳 Pago requerido: <b>${money(r.pago_requerido)}</b> antes del ${r.fecha_limite}` : ""}</div>`;
-      loadHist();
-    } catch (e) { ires.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+    const files = [...ifile.files];
+    if (!files.length) { toast("Elige uno o más archivos"); return; }
+    igo.disabled = true;
+    ires.innerHTML = `<div class="sub mt">Procesando ${files.length} archivo(s)…</div><div id="ilines"></div>`;
+    let okc = 0;
+    for (const f of files) {
+      const fd = new FormData(); fd.append("file", f);
+      let line;
+      try {
+        const r = await api("/import", { method: "POST", body: fd });
+        okc++;
+        line = `✅ <b>${esc(f.name)}</b> → ${esc(r.account)} · ${r.imported} nuevos, ${r.skipped} repetidos · ${r.reconciled === false ? "⚠️ no cuadra" : "conciliado"}`;
+      } catch (e) {
+        line = `⛔ <b>${esc(f.name)}</b> → ${esc(e.message)}`;
+      }
+      document.getElementById("ilines").insertAdjacentHTML("beforeend",
+        `<div class="row"><div class="l meta">${line}</div></div>`);
+    }
+    await api("/recategorize", { method: "POST", body: {} });
+    const dash = await api("/dashboard");
+    ires.insertAdjacentHTML("beforeend", `<div class="sub mt">Listo: ${okc}/${files.length} importados. ${
+      dash.por_catalogar ? `<b>${dash.por_catalogar} movimientos por catalogar</b> → <a id="gocat2">revisar ›</a>` : "Todo catalogado ✅"}</div>`);
+    const gc = document.getElementById("gocat2");
+    if (gc) gc.onclick = renderPorCatalogar;
+    loadHist();
     igo.disabled = false;
   };
   async function loadHist() {
@@ -439,6 +493,36 @@ async function renderImportar() {
       '<div class="sub">Aún no has importado estados.</div>';
   }
   loadHist();
+}
+
+async function renderActualizar() {
+  const v = await api("/version").catch(() => ({ version: "?" }));
+  const cmd = "unzip -o ~/finanzas-*.zip -d ~/sistema";
+  $app.innerHTML = `
+  <h1>Actualizar programa</h1>
+  <div class="card">
+    <div class="q">Versión instalada</div>
+    <div class="big">v${esc(v.version)}</div>
+    <div class="sub">Tu información (movimientos, catálogo, metas) NUNCA se borra al actualizar — vive en un archivo aparte que no se toca.</div>
+  </div>
+  <h2>Cómo actualizar (3 pasos)</h2>
+  <div class="card">
+    <div class="row"><div class="l"><div class="name">1. Sube el ZIP nuevo</div>
+      <div class="meta">En PythonAnywhere → pestaña Files → Upload a file → el zip que te pasé.</div></div></div>
+    <div class="row"><div class="l"><div class="name">2. Corre este comando en la consola Bash</div>
+      <div class="meta">Reemplaza el código sin tocar tus datos:</div>
+      <div class="mt" style="display:flex;gap:8px;align-items:center">
+        <code style="flex:1;background:var(--bg);padding:10px 12px;border-radius:10px;font-size:.8rem;overflow:auto">${cmd}</code>
+        <button class="btn-line" id="cpcmd">Copiar</button>
+      </div></div></div>
+    <div class="row"><div class="l"><div class="name">3. Reload</div>
+      <div class="meta">Pestaña Web → botón verde Reload. Listo, ya tienes la versión nueva.</div></div></div>
+  </div>
+  <p class="sub">Nota: nunca necesitas borrar nada. El comando solo sobrescribe los archivos del programa.</p>`;
+  document.getElementById("cpcmd").onclick = () => {
+    navigator.clipboard.writeText(cmd).then(() => toast("Comando copiado ✅"),
+      () => toast("Selecciónalo y cópialo manualmente"));
+  };
 }
 
 function renderSeguridad() {
