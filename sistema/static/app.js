@@ -84,10 +84,12 @@ async function renderInicio() {
   $app.innerHTML = `<div class="loading">Cargando…</div>`;
   const d = await api("/dashboard");
   const cv = d.como_voy, nw = d.cuanto_valgo;
+  const hoy = new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
   $app.innerHTML = `
   <h1>Hola, ${esc(d.usuario)} 👋</h1>
+  <p class="sub" style="margin:-8px 2px 14px;text-align:left">${hoy}</p>
 
-  ${d.por_catalogar ? `<div class="card" style="border-color:var(--brand)">
+  ${d.por_catalogar ? `<div class="card accent">
     <div class="q">📝 Movimientos por catalogar</div>
     <div class="big">${d.por_catalogar}</div>
     <div class="sub">El sistema no supo su categoría. <a id="gocat">Revisar y enseñarle ›</a></div>
@@ -191,7 +193,7 @@ async function renderPorCatalogar() {
   <div id="glist">${grupos.map((gp) => `
     <div class="card" data-desc="${esc(gp.description)}">
       <div class="name">${gp.direction === "abono" ? "＋ " : ""}${esc(gp.description)}</div>
-      <div class="meta">${gp.count} movimiento(s) · ${money(gp.total)}</div>
+      <div class="meta">${gp.count} movimiento(s) · ${money(gp.total)}${gp.variants > 1 ? ` · ${gp.variants} variantes` : ""}</div>
       ${gp.refs ? `<div class="meta" style="opacity:.85">📎 ${esc(gp.refs)}</div>` : ""}
       <div class="slot"></div>
     </div>`).join("")}</div>

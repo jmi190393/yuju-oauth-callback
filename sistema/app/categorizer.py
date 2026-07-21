@@ -65,8 +65,20 @@ _COMPILED = [(re.compile(p), cat, tags) for p, cat, tags in RULES]
 
 
 def normalize(s: str) -> str:
-    """Clave de comercio: mayúsculas y espacios simples, para comparar reglas."""
+    """Texto en mayúsculas y espacios simples, para comparar."""
     return " ".join((s or "").upper().split())
+
+
+def merchant_key(desc: str) -> str:
+    """Identidad estable de un comercio: quita los tokens que varían entre
+    cargos del mismo negocio (números de referencia, folios, URLs). Así
+    'UBER TRIP 4821' y 'UBER TRIP 9930' comparten clave y no se re-preguntan.
+    """
+    keep = [t for t in normalize(desc).split()
+            if not any(c.isdigit() for c in t)
+            and "://" not in t and not t.startswith(("HTTP", "WWW"))]
+    key = " ".join(keep).strip()
+    return key if len(key) >= 4 else normalize(desc)
 
 
 def categorize(description: str, detail: str = "") -> tuple[str | None, str]:

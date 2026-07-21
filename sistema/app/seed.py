@@ -8,7 +8,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from .auth import hash_password
-from .models import (Account, Category, Goal, MsiPlan, Provision, Setting,
+from .models import (Account, Category, Goal, Provision, Setting,
                      Subscription, User)
 
 INITIAL_PASSWORD = "finanzas2026"

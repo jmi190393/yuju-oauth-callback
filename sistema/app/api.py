@@ -10,16 +10,16 @@ from flask import Blueprint, g, jsonify, request
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
-from .auth import (COOKIE, current_user_id, hash_password, login_required,
-                   make_token, verify_password)
-from .categorizer import categorize, normalize
+from .auth import (COOKIE, hash_password, login_required, make_token,
+                   verify_password)
+from .categorizer import categorize, merchant_key, normalize
 from .importers import detect_and_parse
 from .models import (Account, Category, Goal, ImportBatch, MsiPlan, Provision,
                      Rule, Setting, Subscription, Transaction, User)
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
-APP_VERSION = "1.3"
+APP_VERSION = "1.4"
 GASTO_KINDS = ("fijo", "variable", "aprovisionamiento")
 
 
@@ -63,10 +63,14 @@ def _learned_rules():
 
 
 def _resolve_category(desc, detail, cat_by_name, learned):
-    """Categoría de un movimiento: reglas aprendidas (ganan) → reglas base."""
-    norm = normalize(desc)
+    """Categoría de un movimiento: reglas aprendidas (ganan) → reglas base.
+
+    Una regla casa por clave de comercio (misma empresa aunque cambie el
+    número final) o por contención (reglas antiguas guardadas completas).
+    """
+    norm, key = normalize(desc), merchant_key(desc)
     for pat, cid in learned:
-        if pat and pat in norm:
+        if pat and (pat == key or pat in norm):
             return cid, ""
     name, tags = categorize(desc, detail)
     return cat_by_name.get(name), tags
@@ -712,24 +716,32 @@ def recategorize():
 @bp.get("/uncategorized")
 @login_required
 def uncategorized():
-    """Gastos sin categoría, agrupados por comercio (los de mayor monto primero).
+    """Gastos sin categoría, agrupados por CLAVE de comercio (misma empresa
+    aunque cambie el número final), de mayor a menor monto.
 
-    Solo cargos: es un sistema de gastos, los depósitos/transferencias entrantes
-    no ensucian la cola. Se puede incluir todo con ?all=1.
+    Solo cargos (es un sistema de gastos); ?all=1 incluye entrantes.
     """
-    query = db().query(Transaction.description, Transaction.direction,
-                       func.count(Transaction.id), func.sum(Transaction.amount),
-                       func.group_concat(Transaction.notes.distinct())) \
+    q = db().query(Transaction.description, Transaction.direction,
+                   Transaction.amount, Transaction.notes) \
         .filter(Transaction.category_id.is_(None))
     if request.args.get("all") != "1":
-        query = query.filter(Transaction.direction == "cargo")
-    rows = (query.group_by(Transaction.description, Transaction.direction)
-            .order_by(func.sum(Transaction.amount).desc()).all())
-    out = []
-    for d, dir_, c, t, refs in rows:
-        refs = " · ".join(sorted(set(r.strip() for r in (refs or "").split(",") if r.strip())))
-        out.append({"description": d, "direction": dir_, "count": c,
-                    "total": round(t or 0, 2), "refs": refs[:220]})
+        q = q.filter(Transaction.direction == "cargo")
+    groups = {}
+    for desc, dir_, amount, notes in q.all():
+        gk = (merchant_key(desc), dir_)
+        g = groups.setdefault(gk, {"key": gk[0], "direction": dir_, "count": 0,
+                                   "total": 0.0, "refs": set(), "variants": set()})
+        g["count"] += 1
+        g["total"] += amount
+        g["variants"].add(desc)
+        if notes:
+            g["refs"].add(notes)
+    out = [{"description": min(g["variants"], key=len), "direction": g["direction"],
+            "count": g["count"], "total": round(g["total"], 2),
+            "variants": len(g["variants"]),
+            "refs": " · ".join(sorted(g["refs"]))[:220]}
+           for g in groups.values()]
+    out.sort(key=lambda x: -x["total"])
     return jsonify(out)
 
 
@@ -741,22 +753,27 @@ def categorize_merchant():
     desc, cid = data.get("description"), data.get("category_id")
     if not desc or not cid:
         return err("Falta el comercio o la categoría")
-    # Por defecto solo cataloga los que están sin categoría (cola). Con
-    # override=true reasigna TODOS los movimientos del comercio (reclasificar).
-    flt = [Transaction.description == desc]
+    # Afecta a TODA la empresa (misma clave de comercio), no solo al texto exacto.
+    # Por defecto solo los pendientes; override=true reasigna todos (reclasificar).
+    key = merchant_key(desc)
+    base = db().query(Transaction)
     if not data.get("override"):
-        flt.append(Transaction.category_id.is_(None))
+        base = base.filter(Transaction.category_id.is_(None))
+    descs = [d for (d,) in base.with_entities(Transaction.description).distinct()
+             if merchant_key(d) == key]
     values = {"category_id": cid}
     if "tags" in data:
         values["tags"] = data["tags"]
-    n = db().query(Transaction).filter(*flt).update(values, synchronize_session=False)
+    cond = [Transaction.description.in_(descs)]
+    if not data.get("override"):
+        cond.append(Transaction.category_id.is_(None))
+    n = db().query(Transaction).filter(*cond).update(values, synchronize_session=False) if descs else 0
     if data.get("remember", True):
-        pat = normalize(desc)
-        rule = db().query(Rule).filter(Rule.pattern == pat).first()
+        rule = db().query(Rule).filter(Rule.pattern == key).first()
         if rule:
             rule.category_id = cid
         else:
-            db().add(Rule(pattern=pat, category_id=cid))
+            db().add(Rule(pattern=key, category_id=cid))
     db().commit()
     return jsonify({"updated": n})
 
@@ -766,25 +783,25 @@ def categorize_merchant():
 def merchants():
     """Comercios con su categoría actual (dominante), para reclasificar."""
     q = request.args.get("q", "").strip()
-    query = db().query(Transaction.description, Transaction.category_id,
-                       func.count(Transaction.id), func.sum(Transaction.amount))
+    query = db().query(Transaction.description, Transaction.category_id, Transaction.amount)
     if q:
         query = query.filter(Transaction.description.ilike(f"%{q}%"))
-    rows = query.group_by(Transaction.description, Transaction.category_id).all()
-    by_desc = {}
-    for desc, cid, cnt, tot in rows:
-        d = by_desc.setdefault(desc, {"description": desc, "count": 0, "total": 0.0, "cats": {}})
-        d["count"] += cnt
-        d["total"] += (tot or 0)
+    groups = {}
+    for desc, cid, amount in query.all():
+        key = merchant_key(desc)
+        g = groups.setdefault(key, {"count": 0, "total": 0.0, "cats": {}, "variants": set()})
+        g["count"] += 1
+        g["total"] += amount
+        g["variants"].add(desc)
         if cid is not None:
-            d["cats"][cid] = d["cats"].get(cid, 0) + cnt
+            g["cats"][cid] = g["cats"].get(cid, 0) + 1
     names = {c.id: (c.emoji, c.name) for c in db().query(Category)}
     out = []
-    for d in by_desc.values():
-        dom = max(d["cats"], key=d["cats"].get) if d["cats"] else None
+    for g in groups.values():
+        dom = max(g["cats"], key=g["cats"].get) if g["cats"] else None
         emoji, name = names.get(dom, ("❓", "(sin categoría)"))
-        out.append({"description": d["description"], "count": d["count"],
-                    "total": round(d["total"], 2), "category_id": dom,
+        out.append({"description": min(g["variants"], key=len), "count": g["count"],
+                    "total": round(g["total"], 2), "category_id": dom,
                     "category": name, "category_emoji": emoji})
     out.sort(key=lambda x: -x["total"])
     return jsonify(out[:200])
