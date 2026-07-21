@@ -3,3 +3,4 @@ uvicorn[standard]>=0.29
 sqlalchemy>=2.0
 pdfplumber>=0.11
 python-multipart>=0.0.9
+a2wsgi>=1.10
