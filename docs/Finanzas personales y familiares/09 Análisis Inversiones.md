@@ -30,18 +30,29 @@ Contrato CLABE 135…9895. Aportación **domiciliada de $2,000/mes** (día ~1, v
 - Portafolio: concentrado en **TQQQ (Nasdaq ×3 apalancado)** y NVDA, con posiciones también en AAPL, MSFT, AMAT, GOOGL, META, TSMC, BABA, LRCX, CRM. Hubo una venta masiva el 9/jun y operaciones CFD grandes (hasta USD $90k) en junio. Perfil de riesgo ALTO — relevante para el módulo de patrimonio (volatilidad esperada).
 - Nota: capital realizado final USD $94,917.80 > no realizado USD $86,713.24 → las posiciones abiertas cargan minusvalía latente de ~USD $8.2k.
 
-## GBM ⚠️ (estados ene–jun 2026, contrato CXZ82504)
-- **El contrato está en CEROS los 6 meses** — valor del portafolio $0.00 de enero a junio.
-- Los $100,000.16 enviados desde Revolut el 6/may **entraron y salieron el mismo día** ("RETIRO DE EFECTIVO POR TRASPASO"). Lo más probable: GBM maneja varios contratos internos (Smart Cash, Trading…) y el dinero vive en OTRO contrato distinto a CXZ82504.
-- PREGUNTA CLAVE (en [[04 Preguntas abiertas]]): ¿qué otras cuentas muestra la app de GBM y cuánto hay en cada una? Estos estados no reflejan el dinero real en GBM.
-- Misterio relacionado: Revolut recibió **$252,367.78 el 7/feb** vía SPEI de STP que no salió de BBVA ni de este contrato GBM — ¿liquidación de otra cuenta GBM?
+## GBM ✅ (dos cuentas, ene–jun 2026)
+**Contrato MXN CXZ82504**: es solo la "puerta de entrada" — está en $0 todo el año; los depósitos entran y se traspasan el mismo día a la cuenta internacional.
+
+**Cuenta GBM+ internacional (GBMP-001-…0180, USD, custodia DriveWealth)** — aquí vive el dinero:
+| Mes 2026 | Valor final (USD) | Nota |
+|---|---|---|
+| Enero | $2,755.13 | |
+| Febrero | $2,528.85 | |
+| Marzo | $2,132.41 | |
+| Abril | $3,241.11 | recuperación de mercado |
+| Mayo | $11,054.58 | depósito **$5,776.17** = los $100,000.16 MXN desde Revolut ✅ (FX ~17.31) |
+| Junio | **$10,609.17** | ≈ $196,000 MXN aprox. |
+
+- Posiciones (30/jun): **~94% TQQQ** (Nasdaq ×3 apalancado, +$2,514 no realizado) + migajas de SPXL + $20.50 cash. Participa en préstamo de valores (securities lending).
+- ⚠️ Nota de riesgo: sumando eToro, la exposición a **TQQQ es la posición dominante del patrimonio bursátil completo** — concentración muy alta en un solo instrumento apalancado.
+- Misterio que SIGUE abierto: los **$252,367.78** que llegaron a Revolut el 7/feb no salieron de BBVA ni de ninguna cuenta GBM (sin retiros en feb) → pregunta pendiente.
 
 ## Foto preliminar del patrimonio líquido/invertido (con lo confirmado)
 | Institución | Valor | Fecha del dato |
 |---|---|---|
 | eToro | USD $86,713 ≈ **$1,600,000 MXN** (aprox.) | 19/jul/2026 |
 | Revolut MXN Inversión | $237,763 | 30/jun/2026 |
+| GBM+ (USD) | USD $10,609 ≈ $196,000 MXN (aprox.) | 30/jun/2026 |
 | Cetes Directo | $56,277 | 30/jun/2026 |
 | BBVA (cuenta eje) | $6,496 | 14/jul/2026 |
-| GBM | pendiente | — |
-| **Total confirmado** | **≈ $1.9M MXN** (aprox. por FX) | + GBM por sumar |
+| **TOTAL PATRIMONIO LÍQUIDO/INVERTIDO** | **≈ $2.1M MXN** (aprox. por FX) | — COMPLETO ✅ |

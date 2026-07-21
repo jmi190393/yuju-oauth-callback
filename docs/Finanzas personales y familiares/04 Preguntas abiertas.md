@@ -43,7 +43,8 @@
 - [ ] ¿"MERCADOPAGO*OPTICASLUX" $12,080 a 6 MSI (abr) — lentes?
 
 ### Del análisis GBM e inversiones
-- [ ] ⚠️ El contrato GBM CXZ82504 está en $0.00 todo el año y los $100,000 de mayo entraron y salieron el mismo día por "traspaso". ¿A qué cuenta/contrato se fueron? ¿Qué cuentas muestra tu app GBM (Smart Cash, Trading…) y cuánto hay en cada una?
+- [x] ~~Contrato GBM en $0~~ ✅ resuelto: el dinero vive en GBM+ internacional (los $100k se convirtieron en USD $5,776.17 el mismo día)
+- [ ] Concentración de riesgo: TQQQ (Nasdaq ×3) domina tanto eToro como GBM+. ¿Es una decisión consciente de portafolio? (nota para conversación, no urgente)
 - [ ] ¿De dónde llegaron **$252,367.78 a Revolut el 7/feb** (SPEI vía STP)? No salieron de BBVA ni del contrato GBM conocido.
 
 ### Del cuestionario (pendientes menores)
@@ -58,7 +59,7 @@
 - [x] ~~Banamex~~ ✅ 6 estados analizados: solo domicilia CFE (bimestral) y Gas Natural (mensual); anualidad $1,426.80. ⚠️ ACCIÓN antes de cancelar: migrar ambas domiciliaciones
 - [x] ~~Cetes Directo~~ ✅ ene–jun analizados ($56,277 al 30/jun)
 - [x] ~~eToro~~ ✅ reporte ene–jul analizado (USD $86,713 al 19/jul)
-- [~] GBM: estados ene–jun recibidos PERO el contrato CXZ82504 está en $0 — falta el contrato donde vive el dinero real
+- [x] ~~GBM~~ ✅ resuelto: CXZ82504 es solo puerta de entrada; cuenta real GBM+ (USD) analizada — USD $10,609 al 30/jun
 
 > [!tip] Al subir estados de cuenta
 > Tachar/ocultar número completo de tarjeta y CLABE. Lo necesario es: comercios, fechas y montos.
