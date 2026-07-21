@@ -55,7 +55,7 @@
 - [x] ~~Revolut crédito~~ ✅ 6 meses analizados (con MSI)
 - [x] ~~Revolut débito~~ ✅ CSV+PDF ene–jun analizados
 - [x] ~~Amex Gold y Platinum~~ ✅ 10 estados analizados (ene–jul)
-- [ ] Banamex (si tiene actividad; está por cancelarse)
+- [x] ~~Banamex~~ ✅ 6 estados analizados: solo domicilia CFE (bimestral) y Gas Natural (mensual); anualidad $1,426.80. ⚠️ ACCIÓN antes de cancelar: migrar ambas domiciliaciones
 - [x] ~~Cetes Directo~~ ✅ ene–jun analizados ($56,277 al 30/jun)
 - [x] ~~eToro~~ ✅ reporte ene–jul analizado (USD $86,713 al 19/jul)
 - [~] GBM: estados ene–jun recibidos PERO el contrato CXZ82504 está en $0 — falta el contrato donde vive el dinero real
