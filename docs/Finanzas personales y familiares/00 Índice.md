@@ -24,5 +24,5 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 |---|---|
 | Cuestionario | ✅ Completo (2026-07-19) |
 | Decisiones de diseño | ✅ Cerradas (2026-07-19) |
-| Estados de cuenta | ✅ COMPLETO: BBVA · Revolut ×2 · Amex ×2 · Cetes · eToro · GBM ×2 · Banamex |
+| Estados de cuenta | ✅ COMPLETO (10 instituciones): BBVA · Revolut ×2 · Amex ×2 · Cetes · eToro · GBM ×2 · Banamex · Safra |
 | Construcción MVP | ⏸ Lista para iniciar |

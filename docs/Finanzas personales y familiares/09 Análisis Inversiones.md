@@ -47,12 +47,22 @@ Contrato CLABE 135…9895. Aportación **domiciliada de $2,000/mes** (día ~1, v
 - ⚠️ Nota de riesgo: sumando eToro, la exposición a **TQQQ es la posición dominante del patrimonio bursátil completo** — concentración muy alta en un solo instrumento apalancado.
 - Misterio que SIGUE abierto: los **$252,367.78** que llegaron a Revolut el 7/feb no salieron de BBVA ni de ninguna cuenta GBM (sin retiros en feb) → pregunta pendiente.
 
-## Foto preliminar del patrimonio líquido/invertido (con lo confirmado)
+## Banco Safra NY ✅ (cuenta conjunta con Nurit — "fondo de boda", estado jun 2026)
+- **Total: USD $77,353.21** ≈ **$1,430,000 MXN** aprox. — Cash $2,582.86 (SNBNY) + acciones $74,770.35 (Safra Securities, cta …9201).
+- ⚠️ Las posiciones son **TQQQ (202 títulos) y SPXL (S&P 500 ×3)** — los MISMOS ETFs apalancados ×3 de eToro y GBM+. El "fondo de boda" también está en instrumentos de altísima volatilidad (−$1,707 solo en junio).
+- Dividendos YTD: $170.08 (con retención non-resident).
+- Cuenta …7188 en $0. Sin actividad más que dividendos → basta un estado por trimestre para mantenerla al día en el sistema.
+
+## Foto del patrimonio líquido/invertido — COMPLETA
 | Institución | Valor | Fecha del dato |
 |---|---|---|
 | eToro | USD $86,713 ≈ **$1,600,000 MXN** (aprox.) | 19/jul/2026 |
+| Safra NY (conjunta con Nurit) | USD $77,353 ≈ **$1,430,000 MXN** (aprox.) | 30/jun/2026 |
 | Revolut MXN Inversión | $237,763 | 30/jun/2026 |
 | GBM+ (USD) | USD $10,609 ≈ $196,000 MXN (aprox.) | 30/jun/2026 |
 | Cetes Directo | $56,277 | 30/jun/2026 |
 | BBVA (cuenta eje) | $6,496 | 14/jul/2026 |
-| **TOTAL PATRIMONIO LÍQUIDO/INVERTIDO** | **≈ $2.1M MXN** (aprox. por FX) | — COMPLETO ✅ |
+| **TOTAL PATRIMONIO LÍQUIDO/INVERTIDO** | **≈ $3.5M MXN** (aprox. por FX) | — COMPLETO ✅ |
+
+> [!warning] Concentración de riesgo (para conversar, no urgente)
+> Sumando eToro + GBM+ + Safra, la gran mayoría del patrimonio bursátil (~USD $150k+) está en **ETFs apalancados ×3 (TQQQ/SPXL)**. En una corrección fuerte del Nasdaq/S&P, estos instrumentos caen 3× — y el fondo de boda y el patrimonio familiar están ahí. El módulo de patrimonio del sistema mostrará esta concentración explícitamente.

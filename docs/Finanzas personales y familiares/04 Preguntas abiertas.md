@@ -52,7 +52,7 @@
 - [ ] Datos fiscales completos para el módulo de facturación (cuando arranque fase 2)
 
 ## Documentos pendientes de subir
-- [ ] **Banco Safra (EUA)** — cuenta conjunta con Nurit, ahorro de boda, USD. Basta el estado más reciente o captura del saldo. (Es la "cuenta USD compartida" del cuestionario, ahora identificada.)
+- [x] ~~Banco Safra (EUA)~~ ✅ estado jun/2026 analizado: USD $77,353 (no se necesita nada más; un estado trimestral para mantener)
 - [x] ~~BBVA~~ ✅ 7 meses analizados
 - [x] ~~Revolut crédito~~ ✅ 6 meses analizados (con MSI)
 - [x] ~~Revolut débito~~ ✅ CSV+PDF ene–jun analizados
