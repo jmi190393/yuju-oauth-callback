@@ -30,9 +30,11 @@ Contrato CLABE 135…9895. Aportación **domiciliada de $2,000/mes** (día ~1, v
 - Portafolio: concentrado en **TQQQ (Nasdaq ×3 apalancado)** y NVDA, con posiciones también en AAPL, MSFT, AMAT, GOOGL, META, TSMC, BABA, LRCX, CRM. Hubo una venta masiva el 9/jun y operaciones CFD grandes (hasta USD $90k) en junio. Perfil de riesgo ALTO — relevante para el módulo de patrimonio (volatilidad esperada).
 - Nota: capital realizado final USD $94,917.80 > no realizado USD $86,713.24 → las posiciones abiertas cargan minusvalía latente de ~USD $8.2k.
 
-## GBM ⏳
-- Entrada 2026 detectada (desde Revolut): **$100,000**. Valor actual: pendiente.
-- Nota: el usuario también reportó posiciones previas en GBM y eToro de años anteriores; los saldos actuales se capturarán cuando comparta estados o capturas.
+## GBM ⚠️ (estados ene–jun 2026, contrato CXZ82504)
+- **El contrato está en CEROS los 6 meses** — valor del portafolio $0.00 de enero a junio.
+- Los $100,000.16 enviados desde Revolut el 6/may **entraron y salieron el mismo día** ("RETIRO DE EFECTIVO POR TRASPASO"). Lo más probable: GBM maneja varios contratos internos (Smart Cash, Trading…) y el dinero vive en OTRO contrato distinto a CXZ82504.
+- PREGUNTA CLAVE (en [[04 Preguntas abiertas]]): ¿qué otras cuentas muestra la app de GBM y cuánto hay en cada una? Estos estados no reflejan el dinero real en GBM.
+- Misterio relacionado: Revolut recibió **$252,367.78 el 7/feb** vía SPEI de STP que no salió de BBVA ni de este contrato GBM — ¿liquidación de otra cuenta GBM?
 
 ## Foto preliminar del patrimonio líquido/invertido (con lo confirmado)
 | Institución | Valor | Fecha del dato |

@@ -42,6 +42,10 @@
 - [ ] KLM $12,112 (8 cargos en may) + pagaste ETA UK: ¿viaje a Europa próximo? ¿presupuesto?
 - [ ] ¿"MERCADOPAGO*OPTICASLUX" $12,080 a 6 MSI (abr) — lentes?
 
+### Del análisis GBM e inversiones
+- [ ] ⚠️ El contrato GBM CXZ82504 está en $0.00 todo el año y los $100,000 de mayo entraron y salieron el mismo día por "traspaso". ¿A qué cuenta/contrato se fueron? ¿Qué cuentas muestra tu app GBM (Smart Cash, Trading…) y cuánto hay en cada una?
+- [ ] ¿De dónde llegaron **$252,367.78 a Revolut el 7/feb** (SPEI vía STP)? No salieron de BBVA ni del contrato GBM conocido.
+
 ### Del cuestionario (pendientes menores)
 - [ ] Confirmar interpretación de la meta: "los primeros 4 meses del bebé" (frase "aquellos cuatro me puede costar")
 - [ ] Datos fiscales completos para el módulo de facturación (cuando arranque fase 2)
@@ -54,7 +58,7 @@
 - [ ] Banamex (si tiene actividad; está por cancelarse)
 - [x] ~~Cetes Directo~~ ✅ ene–jun analizados ($56,277 al 30/jun)
 - [x] ~~eToro~~ ✅ reporte ene–jul analizado (USD $86,713 al 19/jul)
-- [ ] GBM (último estado o captura de saldo actual basta, para patrimonio)
+- [~] GBM: estados ene–jun recibidos PERO el contrato CXZ82504 está en $0 — falta el contrato donde vive el dinero real
 
 > [!tip] Al subir estados de cuenta
 > Tachar/ocultar número completo de tarjeta y CLABE. Lo necesario es: comercios, fechas y montos.
