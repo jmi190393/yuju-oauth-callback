@@ -8,6 +8,7 @@ from datetime import date
 
 from flask import Blueprint, g, jsonify, request
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 
 from .auth import (COOKIE, current_user_id, hash_password, login_required,
                    make_token, verify_password)
@@ -42,6 +43,11 @@ def _setting(key, default=None):
 
 def _tc_usd():
     return float(_setting("tc_usd", "18.5"))
+
+
+def to_mxn(amount, currency, tc):
+    """Convierte a MXN; los saldos/importes en USD usan el tipo de cambio."""
+    return amount * (tc if currency == "USD" else 1)
 
 
 def _month_bounds(month: str):
@@ -130,7 +136,7 @@ def list_accounts():
     tc = _tc_usd()
     out = []
     for a in db().query(Account).order_by(Account.kind, Account.name):
-        mxn = a.balance * (tc if a.currency == "USD" else 1)
+        mxn = to_mxn(a.balance, a.currency, tc)
         out.append({"id": a.id, "name": a.name, "institution": a.institution,
                     "kind": a.kind, "currency": a.currency, "last4": a.last4,
                     "cut_day": a.cut_day, "pay_day": a.pay_day,
@@ -183,7 +189,8 @@ def patch_category(cat_id):
 @login_required
 def list_transactions():
     args = request.args
-    query = db().query(Transaction)
+    query = db().query(Transaction).options(
+        joinedload(Transaction.account), joinedload(Transaction.category))
     if args.get("month"):
         start, end = _month_bounds(args["month"])
         query = query.filter(Transaction.date >= start, Transaction.date <= end)
@@ -361,8 +368,7 @@ def list_subs():
     tc = _tc_usd()
     out, annual_total = [], 0.0
     for s in db().query(Subscription).order_by(Subscription.status, Subscription.name):
-        mxn = s.amount * (tc if s.currency == "USD" else 1)
-        yearly = mxn * (12 if s.frequency == "mensual" else 1)
+        yearly = to_mxn(s.amount, s.currency, tc) * (12 if s.frequency == "mensual" else 1)
         if s.status == "activa":
             annual_total += yearly
         out.append({"id": s.id, "name": s.name, "amount": s.amount, "currency": s.currency,
@@ -462,7 +468,7 @@ def dashboard():
     month = today.strftime("%Y-%m")
     tc = _tc_usd()
 
-    liquid = sum(a.balance * (tc if a.currency == "USD" else 1)
+    liquid = sum(to_mxn(a.balance, a.currency, tc)
                  for a in db().query(Account).filter(Account.kind.in_(("debito", "efectivo")),
                                                      Account.active))
     b = _budget(month)
@@ -483,7 +489,7 @@ def dashboard():
         if 0 <= (s.next_renewal - today).days <= 30:
             upcoming.append({"date": s.next_renewal.isoformat(),
                              "label": f"Renovación {s.name}",
-                             "amount": s.amount * (tc if s.currency == "USD" else 1)})
+                             "amount": to_mxn(s.amount, s.currency, tc)})
     for plan in db().query(MsiPlan).filter(MsiPlan.status == "activo"):
         for m, pago in _plan_unpaid_months(plan):
             if m in (month, _add_months(month, 1)):
@@ -492,7 +498,7 @@ def dashboard():
                                  "amount": pago})
     upcoming.sort(key=lambda x: x["date"])
 
-    networth = sum(a.balance * (tc if a.currency == "USD" else 1)
+    networth = sum(to_mxn(a.balance, a.currency, tc)
                    for a in db().query(Account).filter(Account.in_networth, Account.active))
     msi_pending = sum(sum(x[1] for x in _plan_unpaid_months(p))
                       for p in db().query(MsiPlan).filter(MsiPlan.status == "activo"))

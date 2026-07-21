@@ -8,10 +8,8 @@ import os
 from flask import Flask, g, send_file
 from sqlalchemy.exc import SQLAlchemyError
 
-from .api import bp
-from .auth import SESSION_DAYS  # noqa: F401 (asegura carga temprana del secreto)
+from .api import bp  # importa .auth y .models de forma transitiva
 from .db import Base, SessionLocal, engine
-from .models import User  # noqa: F401
 from .seed import seed
 
 STATIC_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "static"))
