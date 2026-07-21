@@ -52,7 +52,8 @@
 - [x] ~~Revolut débito~~ ✅ CSV+PDF ene–jun analizados
 - [x] ~~Amex Gold y Platinum~~ ✅ 10 estados analizados (ene–jul)
 - [ ] Banamex (si tiene actividad; está por cancelarse)
-- [ ] GBM · eToro · Cetes Directo (último estado o captura de saldo actual basta, para patrimonio)
+- [x] ~~Cetes Directo~~ ✅ ene–jun analizados ($56,277 al 30/jun)
+- [ ] eToro y GBM (último estado o captura de saldo actual basta, para patrimonio)
 
 > [!tip] Al subir estados de cuenta
 > Tachar/ocultar número completo de tarjeta y CLABE. Lo necesario es: comercios, fechas y montos.
