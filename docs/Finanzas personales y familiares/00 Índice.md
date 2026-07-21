@@ -18,6 +18,8 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 - [[09 Análisis Inversiones]] — Cetes, Revolut Inversión, eToro; falta el contrato real de GBM.
 - [[10 Análisis Banamex 2026]] — Solo domicilia CFE y gas; anualidad $1,427 → cancelarla es correcto (migrando domiciliaciones).
 - [[11 Resumen ejecutivo 2026]] — La foto completa: ingresos, gasto real, MSI, seguros, patrimonio y diagnóstico.
+- [[12 Manual del sistema]] — Cómo usar la PWA: pantallas, captura, importación mensual.
+- [[13 Arquitectura y calidad del código]] — Stack, decisiones, revisión de calidad y riesgos.
 
 ## Estado del proyecto
 
@@ -27,5 +29,6 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 | Decisiones de diseño | ✅ Cerradas (2026-07-19) |
 | Estados de cuenta | ✅ COMPLETO (10 instituciones): BBVA · Revolut ×2 · Amex ×2 · Cetes · eToro · GBM ×2 · Banamex · Safra |
 | Resumen ejecutivo | ✅ Entregado (2026-07-21) |
-| Cuestionario final | 📨 Entregado al usuario (2026-07-21) — esperando respuestas |
-| Construcción MVP | ⏸ Arranca al recibir respuestas |
+| Cuestionario final | ✅ Cerrado (2026-07-21) — 25/25 respondidas |
+| Construcción MVP | ✅ **Fase 1 construida** (2026-07-21) — carpeta `sistema/`, ver [[12 Manual del sistema]] |
+| Despliegue en la nube | ⏳ Siguiente paso (opciones en `sistema/README.md`) |

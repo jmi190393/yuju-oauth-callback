@@ -1,0 +1,464 @@
+/* SPA — Finanzas personales y familiares. Sin dependencias, es-MX. */
+"use strict";
+
+const $app = document.getElementById("app");
+const $tabbar = document.getElementById("tabbar");
+const state = { user: null, categories: [], accounts: [], view: "inicio" };
+
+const fmt = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
+const money = (n) => fmt.format(n ?? 0);
+const fdate = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function api(path, opts = {}) {
+  if (opts.body && !(opts.body instanceof FormData)) {
+    opts.headers = { "Content-Type": "application/json", ...opts.headers };
+    opts.body = JSON.stringify(opts.body);
+  }
+  const r = await fetch("/api" + path, opts);
+  if (r.status === 401) { state.user = null; renderLogin(); throw new Error("sesión"); }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail || "Error de servidor");
+  return data;
+}
+
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
+}
+
+/* ---------- login ---------- */
+
+function renderLogin() {
+  $tabbar.classList.add("hidden");
+  $app.innerHTML = `
+  <div class="login-wrap">
+    <h1>💰 Finanzas familiares</h1>
+    <p class="sub">De Jaime y Nurit</p>
+    <div class="card">
+      <label>Usuario</label>
+      <input id="lu" autocomplete="username" placeholder="jaime o nurit">
+      <label>Contraseña</label>
+      <input id="lp" type="password" autocomplete="current-password">
+      <div class="mt"><button class="btn-block" id="lbtn">Entrar</button></div>
+      <div class="error" id="lerr"></div>
+    </div>
+  </div>`;
+  const go = async () => {
+    try {
+      const r = await api("/login", { method: "POST", body: { user: lu.value, password: lp.value } });
+      if (r.must_change_password) toast("Recuerda cambiar tu contraseña en Más → Seguridad");
+      await boot();
+    } catch (e) { lerr.textContent = e.message; }
+  };
+  lbtn.onclick = go;
+  lp.addEventListener("keydown", (e) => e.key === "Enter" && go());
+}
+
+/* ---------- shell ---------- */
+
+async function boot() {
+  try { state.user = await api("/me"); } catch { return; }
+  [state.categories, state.accounts] = await Promise.all([api("/categories"), api("/accounts")]);
+  $tabbar.classList.remove("hidden");
+  show(state.view);
+}
+
+function show(view) {
+  state.view = view;
+  document.querySelectorAll(".tabbar button").forEach((b) =>
+    b.classList.toggle("active", b.dataset.view === view));
+  ({ inicio: renderInicio, movs: renderMovs, capturar: renderCapturar,
+     presupuesto: renderPresupuesto, mas: renderMas }[view] || renderInicio)();
+}
+$tabbar.addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (b) show(b.dataset.view);
+});
+
+/* ---------- inicio: las 5 preguntas ---------- */
+
+async function renderInicio() {
+  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  const d = await api("/dashboard");
+  const cv = d.como_voy, nw = d.cuanto_valgo;
+  $app.innerHTML = `
+  <h1>Hola, ${esc(d.usuario)} 👋</h1>
+
+  <div class="card">
+    <div class="q">¿Cuánto tengo? (líquido)</div>
+    <div class="big">${money(d.cuanto_tengo.liquido)}</div>
+    <div class="sub">BBVA + Revolut + efectivo. No incluye inversiones.</div>
+  </div>
+
+  <div class="card">
+    <div class="q">¿Cómo voy este mes? <span class="pill ${cv.semaforo}">${cv.semaforo}</span></div>
+    <div class="big">${money(cv.sobrante_real_proyectado)} <small>sobrante proyectado</small></div>
+    <div class="sub">Gastado ${money(cv.gasto_real)} · MSI del mes ${money(cv.msi_mes)} · plan de sobrante ${money(cv.sobrante_plan)}</div>
+  </div>
+
+  <div class="card">
+    <div class="q">¿Qué viene? (30 días)</div>
+    ${d.que_viene.map((u) => `
+      <div class="row"><div class="l">
+        <div class="name">${esc(u.label)}</div><div class="meta">${fdate(u.date)}</div></div>
+        <div class="amt">${u.amount ? money(u.amount) : ""}</div></div>`).join("") ||
+      '<div class="sub">Nada programado próximo.</div>'}
+  </div>
+
+  <div class="card">
+    <div class="q">¿Cómo van mis metas?</div>
+    ${d.metas.map((g) => `
+      <div class="row"><div class="l" style="flex:1">
+        <div class="name">${g.emoji} ${esc(g.name)}</div>
+        <div class="bar"><i style="width:${Math.min(g.pct, 100)}%"></i></div>
+        <div class="meta">${money(g.current_amount)} de ${money(g.target_amount)} (${g.pct}%)</div>
+      </div></div>`).join("")}
+  </div>
+
+  <div class="card">
+    <div class="q">¿Cuánto valgo?</div>
+    <div class="big">${money(nw.patrimonio_mxn)}</div>
+    <div class="sub">Patrimonio líquido/invertido (USD a $${nw.tc_usd}) − MSI pendiente ${money(nw.msi_pendiente)}</div>
+  </div>`;
+}
+
+/* ---------- captura rápida ---------- */
+
+function renderCapturar() {
+  const cats = state.categories.filter((c) => ["fijo", "variable"].includes(c.kind));
+  const accs = state.accounts.filter((a) => a.active && ["debito", "credito", "efectivo"].includes(a.kind));
+  $app.innerHTML = `
+  <h1>Capturar gasto</h1>
+  <div class="card">
+    <input id="camt" class="amount-input" type="number" inputmode="decimal" placeholder="$0">
+    <input id="cdesc" placeholder="¿En qué fue? (ej. propina valet)" class="mt">
+    <label>Categoría</label>
+    <div class="chips" id="cchips">
+      ${cats.map((c) => `<button class="chip" data-id="${c.id}">${c.emoji} ${esc(c.name)}</button>`).join("")}
+    </div>
+    <label>Cuenta</label>
+    <select id="cacc">
+      ${accs.map((a) => `<option value="${a.id}" ${a.kind === "efectivo" ? "selected" : ""}>${esc(a.name)}</option>`).join("")}
+    </select>
+    <div class="field-grid">
+      <div><label>Fecha</label><input id="cdate" type="date" value="${new Date().toISOString().slice(0, 10)}"></div>
+      <div><label>Etiquetas</label>
+        <div class="chips">
+          <button class="chip" data-tag="bebe">👶 bebé</button>
+          <button class="chip" data-tag="viaje">✈️ viaje</button>
+          <button class="chip" data-tag="facturable">🧾 facturar</button>
+        </div></div>
+    </div>
+    <div class="mt"><button class="btn-block" id="csave">Guardar</button></div>
+  </div>
+  <p class="sub" style="text-align:center">Tip: si eliges categoría no necesitas descripción — dos toques y listo.</p>`;
+
+  let selCat = null; const selTags = new Set();
+  cchips.addEventListener("click", (e) => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    cchips.querySelectorAll(".chip").forEach((x) => x.classList.remove("sel"));
+    b.classList.add("sel"); selCat = +b.dataset.id;
+  });
+  $app.querySelectorAll("[data-tag]").forEach((b) => b.onclick = () => {
+    b.classList.toggle("sel");
+    selTags.has(b.dataset.tag) ? selTags.delete(b.dataset.tag) : selTags.add(b.dataset.tag);
+  });
+  csave.onclick = async () => {
+    const amount = parseFloat(camt.value);
+    if (!amount) { toast("Pon el monto 🙂"); return; }
+    csave.disabled = true;
+    try {
+      const cat = state.categories.find((c) => c.id === selCat);
+      await api("/transactions", { method: "POST", body: {
+        amount, description: cdesc.value || (cat ? cat.name : "Gasto"),
+        category_id: selCat, account_id: +cacc.value, date: cdate.value,
+        tags: [...selTags].join(",") } });
+      toast("Guardado ✅"); show("inicio");
+    } catch (e) { toast(e.message); csave.disabled = false; }
+  };
+}
+
+/* ---------- movimientos ---------- */
+
+async function renderMovs(filters = {}) {
+  const month = filters.month || new Date().toISOString().slice(0, 7);
+  $app.innerHTML = `
+  <h1>Movimientos</h1>
+  <div class="card">
+    <div class="field-grid">
+      <div><label>Mes</label><input id="fmonth" type="month" value="${month}"></div>
+      <div><label>Buscar</label><input id="fq" placeholder="comercio…" value="${esc(filters.q || "")}"></div>
+    </div>
+  </div>
+  <div id="mlist"><div class="loading">Cargando…</div></div>`;
+  fmonth.onchange = () => renderMovs({ ...filters, month: fmonth.value });
+  let deb;
+  fq.oninput = () => { clearTimeout(deb); deb = setTimeout(() => renderMovs({ ...filters, month: fmonth.value, q: fq.value }), 350); };
+
+  const qs = new URLSearchParams({ month, ...(filters.q ? { q: filters.q } : {}) });
+  const txns = await api("/transactions?" + qs);
+  const total = txns.filter((t) => t.direction === "cargo").reduce((s, t) => s + t.amount, 0);
+  document.getElementById("mlist").innerHTML = `
+  <div class="card">
+    <div class="sub">${txns.length} movimientos · cargos del filtro: <b>${money(total)}</b></div>
+    ${txns.map((t) => `
+      <div class="row" data-id="${t.id}"><div class="l">
+        <div class="name">${t.category_emoji} ${esc(t.description)}</div>
+        <div class="meta">${fdate(t.date)} · ${esc(t.account)} · ${esc(t.category || "sin categoría")}${t.tags ? " · " + esc(t.tags) : ""}</div>
+      </div>
+      <div class="amt ${t.direction === "abono" ? "pos" : ""}">${t.direction === "abono" ? "+" : "−"}${money(t.amount)}</div>
+      </div>`).join("") || '<div class="sub">Sin movimientos con este filtro.</div>'}
+  </div>`;
+  document.getElementById("mlist").addEventListener("click", (e) => {
+    const row = e.target.closest(".row"); if (!row) return;
+    const t = txns.find((x) => x.id === +row.dataset.id);
+    if (t) editTxn(t, () => renderMovs(filters));
+  });
+}
+
+function editTxn(t, done) {
+  $app.innerHTML = `
+  <h1>Editar movimiento</h1>
+  <div class="card">
+    <div class="big">${t.direction === "abono" ? "+" : "−"}${money(t.amount)}</div>
+    <div class="sub">${esc(t.description)} · ${fdate(t.date)} · ${esc(t.account)}</div>
+    <label>Categoría</label>
+    <select id="ecat">
+      <option value="">— sin categoría —</option>
+      ${state.categories.map((c) => `<option value="${c.id}" ${c.id === t.category_id ? "selected" : ""}>${c.emoji} ${esc(c.name)}</option>`).join("")}
+    </select>
+    <label>Etiquetas (separadas por coma)</label>
+    <input id="etags" value="${esc(t.tags)}">
+    <label>Factura</label>
+    <select id="efact">
+      ${["", "pendiente", "facturado", "no_facturable"].map((v) =>
+        `<option value="${v}" ${v === t.factura_status ? "selected" : ""}>${v || "—"}</option>`).join("")}
+    </select>
+    <div class="mt field-grid">
+      <button class="btn-line" id="edel">Borrar</button>
+      <button id="esave">Guardar</button>
+    </div>
+  </div>`;
+  esave.onclick = async () => {
+    await api(`/transactions/${t.id}`, { method: "PATCH", body: {
+      category_id: ecat.value ? +ecat.value : null, tags: etags.value, factura_status: efact.value } });
+    toast("Actualizado ✅"); done();
+  };
+  edel.onclick = async () => {
+    if (!confirm("¿Borrar este movimiento?")) return;
+    await api(`/transactions/${t.id}`, { method: "DELETE" });
+    toast("Borrado"); done();
+  };
+}
+
+/* ---------- presupuesto ---------- */
+
+async function renderPresupuesto() {
+  const month = new Date().toISOString().slice(0, 7);
+  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  const b = await api("/budget?month=" + month);
+  const grupo = (kind, titulo) => {
+    const rows = b.categorias.filter((c) => c.kind === kind);
+    if (!rows.length) return "";
+    return `<h2>${titulo}</h2><div class="card">${rows.map((c) => `
+      <div class="row"><div class="l" style="flex:1">
+        <div class="name">${c.emoji} ${esc(c.name)}</div>
+        ${c.budget ? `<div class="bar"><i class="${c.estado}" style="width:${Math.min((c.spent / c.budget) * 100, 100)}%"></i></div>` : ""}
+        <div class="meta">${money(c.spent)}${c.budget ? " de " + money(c.budget) : ""}</div>
+      </div></div>`).join("")}</div>`;
+  };
+  $app.innerHTML = `
+  <h1>Presupuesto · ${month}</h1>
+  <div class="card">
+    <div class="q">La regla del sobrante</div>
+    <div class="row"><div class="l name">Ingreso</div><div class="amt pos">${money(b.ingreso)}</div></div>
+    <div class="row"><div class="l name">− Fijos (plan)</div><div class="amt">${money(b.fijos_plan)}</div></div>
+    <div class="row"><div class="l name">− Aprovisionamiento anual</div><div class="amt">${money(b.aprovisionamiento)}</div></div>
+    <div class="row"><div class="l name">− MSI del mes</div><div class="amt">${money(b.msi_mes)}</div></div>
+    <div class="row"><div class="l name">− Variables (plan)</div><div class="amt">${money(b.variables_plan)}</div></div>
+    <div class="row"><div class="l name"><b>= Sobrante invertible</b></div><div class="amt pos"><b>${money(b.sobrante_plan)}</b></div></div>
+    <div class="sub mt">Real: llevas gastado ${money(b.gasto_real)} → sobrante proyectado <b>${money(b.sobrante_real_proyectado)}</b></div>
+  </div>
+  ${grupo("fijo", "Fijos")}${grupo("variable", "Variables")}${grupo("aprovisionamiento", "Aprovisionamiento")}`;
+}
+
+/* ---------- más: submenú ---------- */
+
+function renderMas() {
+  $app.innerHTML = `
+  <h1>Más</h1>
+  <div class="card menu-list" id="menu">
+    <div class="row" data-go="msi"><div class="l name">📆 Pagos a meses (MSI)</div><div>›</div></div>
+    <div class="row" data-go="subs"><div class="l name">🔁 Suscripciones</div><div>›</div></div>
+    <div class="row" data-go="metas"><div class="l name">🎯 Metas</div><div>›</div></div>
+    <div class="row" data-go="cuentas"><div class="l name">🏦 Cuentas y patrimonio</div><div>›</div></div>
+    <div class="row" data-go="importar"><div class="l name">📥 Importar estado de cuenta</div><div>›</div></div>
+    <div class="row" data-go="seguridad"><div class="l name">🔒 Seguridad</div><div>›</div></div>
+    <div class="row" data-go="salir"><div class="l name">👋 Cerrar sesión</div><div>›</div></div>
+  </div>`;
+  menu.addEventListener("click", (e) => {
+    const r = e.target.closest("[data-go]"); if (!r) return;
+    ({ msi: renderMsi, subs: renderSubs, metas: renderMetas, cuentas: renderCuentas,
+       importar: renderImportar, seguridad: renderSeguridad,
+       salir: async () => { await api("/logout", { method: "POST" }); renderLogin(); } }[r.dataset.go])();
+  });
+}
+
+async function renderMsi() {
+  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  const d = await api("/msi");
+  const activos = d.plans.filter((p) => p.status === "activo");
+  $app.innerHTML = `
+  <h1>Pagos a meses (MSI)</h1>
+  <div class="card">
+    <div class="q">Comprometido total</div>
+    <div class="big">${money(d.total_pending)}</div>
+    <h2 style="margin-left:0">Flujo próximos 6 meses</h2>
+    ${d.committed_next_6.map((m) => `
+      <div class="row"><div class="l name">${m.month}</div><div class="amt">${money(m.amount)}</div></div>`).join("")}
+  </div>
+  <h2>Planes activos (${activos.length})</h2>
+  <div class="card">
+    ${activos.map((p) => `
+      <div class="row"><div class="l">
+        <div class="name">${esc(p.merchant)}</div>
+        <div class="meta">${esc(p.account)} · ${p.payments_made}/${p.months} pagados · termina ${p.ends}</div>
+      </div><div class="amt">${money(p.monthly_payment)}<div class="meta right">/mes</div></div></div>`).join("") ||
+      '<div class="sub">Sin planes activos 🎉</div>'}
+  </div>
+  ${d.plans.some((p) => p.status === "liquidado") ? `<h2>Liquidados</h2><div class="card">${
+    d.plans.filter((p) => p.status === "liquidado").map((p) =>
+      `<div class="row"><div class="l"><div class="name">${esc(p.merchant)}</div>
+       <div class="meta">${esc(p.account)} · ${money(p.total_amount)}</div></div><div>✅</div></div>`).join("")}</div>` : ""}`;
+}
+
+async function renderSubs() {
+  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  const d = await api("/subscriptions");
+  const badge = { activa: "verde", por_confirmar: "amarillo", cancelada: "rojo" };
+  $app.innerHTML = `
+  <h1>Suscripciones</h1>
+  <div class="card">
+    <div class="q">Costo anual total (activas)</div>
+    <div class="big">${money(d.annual_total_mxn)}</div>
+    <div class="sub">≈ ${money(d.annual_total_mxn / 12)} al mes</div>
+  </div>
+  <div class="card">
+    ${d.subscriptions.map((s) => `
+      <div class="row"><div class="l">
+        <div class="name">${esc(s.name)} <span class="pill ${badge[s.status]}">${s.status.replace("_", " ")}</span></div>
+        <div class="meta">${s.currency === "USD" ? "USD " : ""}${s.amount} ${s.frequency}${s.account ? " · " + esc(s.account) : ""}${s.next_renewal ? " · renueva " + fdate(s.next_renewal) : ""}</div>
+      </div><div class="amt">${money(s.annual_mxn)}<div class="meta right">/año</div></div></div>`).join("")}
+  </div>`;
+}
+
+async function renderMetas() {
+  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  const goals = await api("/goals");
+  $app.innerHTML = `
+  <h1>Metas</h1>
+  ${goals.map((g) => `
+  <div class="card">
+    <div class="name" style="font-size:1.05rem">${g.emoji} ${esc(g.name)}</div>
+    <div class="bar mt"><i style="width:${Math.min(g.pct, 100)}%"></i></div>
+    <div class="sub">${money(g.current_amount)} de ${money(g.target_amount)} (${g.pct}%)${g.target_date ? " · para " + fdate(g.target_date) : ""}</div>
+    ${g.notes ? `<div class="sub">${esc(g.notes)}</div>` : ""}
+    <div class="mt"><button class="btn-line" data-id="${g.id}" data-cur="${g.current_amount}">Actualizar monto</button></div>
+  </div>`).join("")}`;
+  $app.querySelectorAll("[data-id]").forEach((b) => b.onclick = async () => {
+    const v = prompt("¿Cuánto llevas ahorrado para esta meta?", b.dataset.cur);
+    if (v === null) return;
+    await api(`/goals/${b.dataset.id}`, { method: "PATCH", body: { current_amount: parseFloat(v) || 0 } });
+    renderMetas();
+  });
+}
+
+async function renderCuentas() {
+  state.accounts = await api("/accounts");
+  const groups = [["debito", "Cuentas"], ["credito", "Tarjetas de crédito"],
+                  ["inversion", "Inversiones"], ["efectivo", "Efectivo"]];
+  $app.innerHTML = `
+  <h1>Cuentas y patrimonio</h1>
+  ${groups.map(([k, titulo]) => {
+    const rows = state.accounts.filter((a) => a.kind === k && a.active);
+    if (!rows.length) return "";
+    return `<h2>${titulo}</h2><div class="card">${rows.map((a) => `
+      <div class="row" data-id="${a.id}"><div class="l">
+        <div class="name">${esc(a.name)}</div>
+        <div class="meta">${esc(a.institution)}${a.cut_day ? " · corte " + a.cut_day : ""}${a.pay_day ? " · pago " + a.pay_day : ""}${a.balance_date ? " · al " + fdate(a.balance_date) : ""}</div>
+      </div><div class="amt">${a.kind === "credito" ? "" : (a.currency === "USD" ? "USD " + a.balance.toLocaleString("es-MX") : money(a.balance))}</div></div>`).join("")}</div>`;
+  }).join("")}
+  <p class="sub">Toca una cuenta de inversión para actualizar su saldo (del estado de cuenta más reciente).</p>`;
+  $app.querySelectorAll(".row[data-id]").forEach((r) => r.onclick = async () => {
+    const a = state.accounts.find((x) => x.id === +r.dataset.id);
+    if (!a || a.kind === "credito") return;
+    const v = prompt(`Saldo actual de ${a.name} (${a.currency}):`, a.balance);
+    if (v === null) return;
+    await api(`/accounts/${a.id}`, { method: "PATCH", body: { balance: parseFloat(v) || 0 } });
+    toast("Saldo actualizado ✅"); renderCuentas();
+  });
+}
+
+async function renderImportar() {
+  $app.innerHTML = `
+  <h1>Importar estado de cuenta</h1>
+  <div class="card">
+    <p class="sub">Sube el PDF del estado (BBVA, Revolut crédito, Amex Gold/Platinum) o el CSV de Revolut débito. El sistema detecta el banco, concilia contra los totales oficiales y categoriza solo.</p>
+    <label class="mt">Archivo</label>
+    <input id="ifile" type="file" accept=".pdf,.csv">
+    <div class="mt"><button class="btn-block" id="igo">Importar</button></div>
+    <div id="ires"></div>
+  </div>
+  <h2>Historial</h2>
+  <div class="card" id="ihist"><div class="sub">Cargando…</div></div>`;
+  igo.onclick = async () => {
+    if (!ifile.files.length) { toast("Elige un archivo"); return; }
+    igo.disabled = true; ires.innerHTML = '<div class="sub mt">Procesando…</div>';
+    const fd = new FormData(); fd.append("file", ifile.files[0]);
+    try {
+      const r = await api("/import", { method: "POST", body: fd });
+      ires.innerHTML = `<div class="sub mt">
+        ✅ <b>${esc(r.account)}</b> · periodo ${r.period[0]} → ${r.period[1]}<br>
+        ${r.imported} nuevos · ${r.skipped} ya existían · ${r.msi_plans_new} planes MSI nuevos<br>
+        Conciliación: <b>${r.reconciled === false ? "⚠️ NO cuadra — revisar" : "al centavo ✅"}</b>
+        ${r.pago_requerido ? `<br>💳 Pago requerido: <b>${money(r.pago_requerido)}</b> antes del ${r.fecha_limite}` : ""}</div>`;
+      loadHist();
+    } catch (e) { ires.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+    igo.disabled = false;
+  };
+  async function loadHist() {
+    const hist = await api("/imports");
+    ihist.innerHTML = hist.map((b) => `
+      <div class="row"><div class="l">
+        <div class="name">${esc(b.filename)}</div>
+        <div class="meta">${b.bank} · ${b.period[0] || "?"} → ${b.period[1] || "?"} · ${b.imported} nuevos</div>
+      </div><div>${b.reconciled === false ? "⚠️" : "✅"}</div></div>`).join("") ||
+      '<div class="sub">Aún no has importado estados.</div>';
+  }
+  loadHist();
+}
+
+function renderSeguridad() {
+  $app.innerHTML = `
+  <h1>Seguridad</h1>
+  <div class="card">
+    <label>Contraseña actual</label><input id="pc" type="password">
+    <label>Nueva contraseña (mínimo 8)</label><input id="pn" type="password">
+    <div class="mt"><button class="btn-block" id="pgo">Cambiar contraseña</button></div>
+    <div class="error" id="perr"></div>
+  </div>`;
+  pgo.onclick = async () => {
+    try {
+      await api("/password", { method: "POST", body: { current: pc.value, new: pn.value } });
+      toast("Contraseña cambiada ✅"); renderMas();
+    } catch (e) { perr.textContent = e.message; }
+  };
+}
+
+/* ---------- arranque ---------- */
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+boot().catch(renderLogin);
