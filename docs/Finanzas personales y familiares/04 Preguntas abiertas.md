@@ -28,17 +28,17 @@
 ### Del análisis Revolut
 - [x] ~~¿$270,000 a Banorte el 26/feb?~~ ✅ (21/jul): pago de una deuda que tenía con su suegro (un mueble) → categoría pago de deuda familiar, no recurrente
 - [x] ~~¿La tarjeta adicional ****0870 es de Nurit?~~ ✅ (21/jul): NO — es del propio Jaime, la virtual del wallet (Apple/Google Pay). Todo el gasto Revolut es de él
-- [ ] Claude $3,477.96 (abr): ¿plan anual o mensual? · Nutrafol $3,576.87: ¿suscripción recurrente? · OpenAI $110/mes cesó en marzo: ¿cancelada?
+- [x] ~~Claude/Nutrafol/OpenAI~~ ✅ (21/jul): **Claude = plan ANUAL** ($3,477.96, renueva ~abril) · **Nutrafol = suplementos para el pelo** (probable recurrente, vigilar) · **OpenAI = cancelado** ✂️
 - [x] ~~¿El pico de $73,886 en Amex B (jun)?~~ ✅ resuelto: mensualidades del MSI automático Bupa+KLM en Platinum; el fijo $9,289.34 eran mensualidades de planes MSI previos
 - [x] ~~¿Cuánto hay HOY en eToro, GBM y Cetes?~~ ✅ resuelto con estados: eToro USD $86,713 · GBM+ USD $10,609 · Cetes $56,277
 - [ ] ¿Viaje a Reino Unido en puerta? (pagó ETA UK el 8/jun) — para presupuestarlo
 
 ### Del análisis Amex
-- [ ] ⚠️ **Bupa dos veces en 5 meses**: ene $103,509+$36,254 (Gold) y may/jun $102,421+$35,167 (Platinum). ¿Son dos pólizas (tuya y de Nurit)? ¿Renovación adelantada? ¿Se duplicó algo?
+- [x] ~~Bupa dos veces en 5 meses~~ ✅ (21/jul): son **DOS pólizas (una de Jaime y una de Nurit)** y el pago total anual se divide en **dos pagos al año** → no hay duplicado. Presupuesto: Bupa ≈ $277k/año en 2 exhibiciones semestrales (ene y may/jun)
 - [x] ~~"TIENDA COM MEX E COMMER"~~ ✅ (21/jul): es **La Comer** (súper) → $37,506/7 meses ≈ $5,400/mes de supermercado adicional a Costco/Walmart
 - [x] ~~H2OSYS / Soluciones en Agua MAIM~~ ✅ (21/jul): sí, sistema de agua de la casa → categoría casa/mantenimiento ($517/mes recurrente)
-- [ ] ¿Dónde se cobran **Netflix/Spotify/Disney/Amazon Prime/Obsidian**? No aparecen en ninguna de las 4 tarjetas analizadas.
-- [ ] Apple.com/Bill: 23 microcargos ($49–$399). ¿Qué suscripciones Apple tienen activas? (¿iCloud, Apple One, apps?)
+- [x] ~~¿Dónde se cobran Netflix/Prime/Obsidian?~~ ✅ (21/jul): Prime "debe estar en Amex" (o en mes de prueba) y Obsidian en Revolut — ninguno apareció en ene–jul, probablemente **cargos anuales fuera del periodo** → el sistema los detectará cuando caigan. Netflix/Spotify/Disney: no los mencionó (¿no los tienen?)
+- [x] ~~Suscripciones Apple~~ ✅ (21/jul): **iCloud** (los 23 microcargos de $49–$399 se registran como Apple/iCloud + compras App Store)
 - [ ] KLM $12,112 (8 cargos en may) + pagaste ETA UK: ¿viaje a Europa próximo? ¿presupuesto?
 - [x] ~~MERCADOPAGO*OPTICASLUX $12,080 a 6 MSI~~ ✅ (21/jul): compra de lentes → categoría salud/óptica
 

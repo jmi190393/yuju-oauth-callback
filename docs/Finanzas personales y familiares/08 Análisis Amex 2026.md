@@ -16,7 +16,7 @@ Total de cargos ene–jul: **$796,714** (~$132,786/mes, incluye mensualidades de
 ### Los rubros grandes
 | Rubro | Total | Detalle |
 |---|---|---|
-| 🏥 **Seguros Bupa (gastos médicos)** | **$277,351** | ⚠️ DOS pagos anuales en 5 meses: ene $103,509+$36,254 (Gold, 3 MSI) y may/jun $102,421+$35,167 (Platinum, 3 MSI autom.). ¿Dos pólizas distintas (él/ella)? ¿Renovación? PREGUNTA CLAVE |
+| 🏥 **Seguros Bupa (gastos médicos)** | **$277,351** | ✅ Resuelto (21/jul): son **2 pólizas (Jaime y Nurit)** y el total anual se paga en **2 exhibiciones semestrales** (ene y may/jun) → aprovisionar ≈ $23,100/mes solo de Bupa |
 | 🚗 Seguros Qualitas (2 autos) | $62,356 | oct $14,472 (6 MSI) + dic $47,884 (6 MSI) — ambos ya liquidados |
 | 🛒 Online: Amazon+ML+MercadoPago | ~$59,300 | compras frecuentes, varias a MSI |
 | 🍔 **Uber Eats** | $28,746 | **55 pedidos** (~$4,791/mes) — categoría invisible hasta hoy |
