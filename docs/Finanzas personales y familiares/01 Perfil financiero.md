@@ -22,7 +22,7 @@ Respuestas del cuestionario inicial — 2026-07-19.
 | Amex Platinum | Crédito | Tiene MSI activos |
 | Revolut | Crédito y débito | Tiene MSI activos |
 | Banamex | Crédito | **Por cancelar** |
-| Cuenta USD compartida | Ahorro | Uso muy esporádico |
+| Banco Safra (EUA) — cuenta USD compartida con Nurit | Ahorro (fondo de boda) | Uso muy esporádico |
 | GBM / eToro / Cetes Directo | Inversión | Largo plazo, no piensa retirar |
 
 - **Días de corte y pago**: no los sabe → se extraerán de los estados de cuenta.
