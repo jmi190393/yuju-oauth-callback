@@ -11,8 +11,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from .advisor import ai_available, ask_advisor
-from .auth import (COOKIE, hash_password, login_required, make_token,
-                   verify_password)
+from .auth import (COOKIE, DUMMY_HASH, SESSION_DAYS, hash_password,
+                   login_required, make_token, verify_password)
 from .categorizer import categorize, merchant_key, normalize
 from .importers import detect_and_parse
 from .models import (Account, Category, Goal, ImportBatch, MsiPlan, Provision,
@@ -20,7 +20,7 @@ from .models import (Account, Category, Goal, ImportBatch, MsiPlan, Provision,
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
-APP_VERSION = "1.8"
+APP_VERSION = "1.9"
 GASTO_KINDS = ("fijo", "variable", "aprovisionamiento")
 
 
@@ -64,6 +64,12 @@ def _tc_usd():
 def to_mxn(amount, currency, tc):
     """Convierte a MXN; los saldos/importes en USD usan el tipo de cambio."""
     return amount * (tc if currency == "USD" else 1)
+
+
+def _networth(tc):
+    """Patrimonio consolidado en MXN: cuentas activas marcadas para patrimonio."""
+    return sum(to_mxn(a.balance, a.currency, tc)
+               for a in db().query(Account).filter(Account.in_networth, Account.active))
 
 
 def _learned_rules():
@@ -125,20 +131,23 @@ def _txn_json(t: Transaction):
 def login():
     data = body()
     q = str(data.get("user", "")).strip().lower()
+    pw = data.get("password", "")
     user = db().query(User).filter(
         (func.lower(User.email) == q) | (func.lower(User.name) == q)).first()
-    if not user or not verify_password(data.get("password", ""), user.password_hash):
+    # Verifica siempre un hash (el del usuario o el señuelo) → tiempo constante.
+    ok = verify_password(pw, user.password_hash if user else DUMMY_HASH)
+    if not user or not ok:
         return err("Usuario o contraseña incorrectos", 401)
     resp = jsonify({"name": user.name, "must_change_password": user.must_change_password})
-    resp.set_cookie(COOKIE, make_token(user.id), max_age=30 * 86400,
-                    httponly=True, samesite="Lax")
+    resp.set_cookie(COOKIE, make_token(user.id), max_age=SESSION_DAYS * 86400,
+                    httponly=True, samesite="Lax", secure=request.is_secure)
     return resp
 
 
 @bp.post("/logout")
 def logout():
     resp = jsonify({"ok": True})
-    resp.delete_cookie(COOKIE)
+    resp.delete_cookie(COOKIE, samesite="Lax", secure=request.is_secure)
     return resp
 
 
@@ -610,8 +619,7 @@ def dashboard():
                                  "amount": pago})
     upcoming.sort(key=lambda x: x["date"])
 
-    networth = sum(to_mxn(a.balance, a.currency, tc)
-                   for a in db().query(Account).filter(Account.in_networth, Account.active))
+    networth = _networth(tc)
     msi_pending = sum(sum(x[1] for x in _plan_unpaid_months(p))
                       for p in db().query(MsiPlan).filter(MsiPlan.status == "activo"))
     por_catalogar = db().query(func.count(Transaction.id)).filter(
@@ -1174,8 +1182,7 @@ def _insights():
          Account.name.ilike("%apalanc%") | Account.notes.ilike("%apalanc%"))).all()
     if riesgo:
         total_riesgo = sum(to_mxn(a.balance, a.currency, tc) for a in riesgo)
-        patrimonio = sum(to_mxn(a.balance, a.currency, tc)
-                         for a in db().query(Account).filter(Account.in_networth, Account.active))
+        patrimonio = _networth(tc)
         pct = round(total_riesgo / patrimonio * 100) if patrimonio else 0
         tips.append({
             "icon": "⚠️", "title": "Concentración de riesgo",
@@ -1236,8 +1243,7 @@ def _advisor_summary(ins):
                  "; ".join(f"{c['name']} {_fmt(c['spent'])}" for c in cats) + ".")
 
     # Patrimonio y MSI
-    patrimonio = sum(to_mxn(a.balance, a.currency, tc)
-                     for a in db().query(Account).filter(Account.in_networth, Account.active))
+    patrimonio = _networth(tc)
     msi_pending = sum(sum(x[1] for x in _plan_unpaid_months(p))
                       for p in db().query(MsiPlan).filter(MsiPlan.status == "activo"))
     L.append(f"Patrimonio consolidado: {_fmt(patrimonio)}. Deuda MSI pendiente: "

@@ -59,6 +59,14 @@ function renderLogin() {
 
 /* ---------- shell ---------- */
 
+const loading = () => { $app.innerHTML = `<div class="loading">Cargando…</div>`; };
+
+// Debounce reutilizable (búsquedas): agrupa ráfagas de eventos en una sola llamada.
+const debounce = (fn, ms = 300) => {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+};
+
 async function boot() {
   try { state.user = await api("/me"); } catch { return; }
   [state.categories, state.accounts] = await Promise.all([api("/categories"), api("/accounts")]);
@@ -70,8 +78,16 @@ function show(view) {
   state.view = view;
   document.querySelectorAll(".tabbar button").forEach((b) =>
     b.classList.toggle("active", b.dataset.view === view));
-  ({ inicio: renderInicio, movs: renderMovs, capturar: renderCapturar,
-     presupuesto: renderPresupuesto, mas: renderMas }[view] || renderInicio)();
+  const fn = { inicio: renderInicio, movs: renderMovs, capturar: renderCapturar,
+               presupuesto: renderPresupuesto, mas: renderMas }[view] || renderInicio;
+  // Una vista que falla nunca debe dejar el spinner colgado: mostramos un aviso.
+  Promise.resolve(fn()).catch((e) => {
+    $app.innerHTML = `<div class="card"><div class="q">No se pudo cargar</div>
+      <p class="sub">${esc(e.message || "Error")}. Revisa tu conexión.</p>
+      <button class="btn" id="retry">Reintentar</button></div>`;
+    const r = document.getElementById("retry");
+    if (r) r.onclick = () => show(view);
+  });
 }
 $tabbar.addEventListener("click", (e) => {
   const b = e.target.closest("button");
@@ -81,7 +97,7 @@ $tabbar.addEventListener("click", (e) => {
 /* ---------- inicio: las 5 preguntas ---------- */
 
 async function renderInicio() {
-  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  loading();
   const d = await api("/dashboard");
   const cv = d.como_voy, nw = d.cuanto_valgo;
   const hoy = new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
@@ -181,7 +197,7 @@ function mountCategoryPicker(slot, desc, { override = false } = {}) {
 }
 
 async function renderPorCatalogar() {
-  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  loading();
   const grupos = await api("/uncategorized");
   if (!grupos.length) {
     $app.innerHTML = `
@@ -217,8 +233,7 @@ async function renderComercios() {
   <p class="sub" style="margin:0 4px 12px">Busca cualquier comercio y cambia su categoría. Se actualizan todos sus movimientos y el sistema reaprende.</p>
   <div class="card"><input id="mq" placeholder="Busca un comercio… (ej. Uber, Amazon)"></div>
   <div id="mlist"><div class="loading">Cargando…</div></div>`;
-  let deb;
-  mq.oninput = () => { clearTimeout(deb); deb = setTimeout(load, 300); };
+  mq.oninput = debounce(load, 300);
   async function load() {
     const q = mq.value.trim();
     const items = await api("/merchants" + (q ? "?q=" + encodeURIComponent(q) : ""));
@@ -305,40 +320,49 @@ function renderCapturar() {
 /* ---------- movimientos ---------- */
 
 async function renderMovs(filters = {}) {
-  const month = filters.month || new Date().toISOString().slice(0, 7);
+  const month0 = filters.month || new Date().toISOString().slice(0, 7);
   $app.innerHTML = `
   <h1>Movimientos</h1>
   <div class="card">
     <div class="field-grid">
-      <div><label>Mes</label><input id="fmonth" type="month" value="${month}"></div>
+      <div><label>Mes</label><input id="fmonth" type="month" value="${month0}"></div>
       <div><label>Buscar</label><input id="fq" placeholder="comercio…" value="${esc(filters.q || "")}"></div>
     </div>
   </div>
   <div id="mlist"><div class="loading">Cargando…</div></div>`;
-  fmonth.onchange = () => renderMovs({ ...filters, month: fmonth.value });
-  let deb;
-  fq.oninput = () => { clearTimeout(deb); deb = setTimeout(() => renderMovs({ ...filters, month: fmonth.value, q: fq.value }), 350); };
-
-  const qs = new URLSearchParams({ month, ...(filters.q ? { q: filters.q } : {}) });
-  const txns = await api("/transactions?" + qs);
-  const total = txns.filter((t) => t.direction === "cargo").reduce((s, t) => s + t.amount, 0);
-  document.getElementById("mlist").innerHTML = `
-  <div class="card">
-    <div class="sub">${txns.length} movimientos · cargos del filtro: <b>${money(total)}</b></div>
-    ${txns.map((t) => `
-      <div class="row" data-id="${t.id}"><div class="l">
-        <div class="name">${t.category_emoji} ${esc(t.description)}</div>
-        <div class="meta">${fdate(t.date)} · ${esc(t.account)} · ${esc(t.category || "sin categoría")}${t.tags ? " · " + esc(t.tags) : ""}</div>
-        ${t.notes ? `<div class="meta" style="opacity:.85">📎 ${esc(t.notes)}</div>` : ""}
-      </div>
-      <div class="amt ${t.direction === "abono" ? "pos" : ""}">${t.direction === "abono" ? "+" : "−"}${money(t.amount)}</div>
-      </div>`).join("") || '<div class="sub">Sin movimientos con este filtro.</div>'}
-  </div>`;
-  document.getElementById("mlist").addEventListener("click", (e) => {
+  // Shell fijo: los filtros solo recargan #mlist (no se recrea el input, así no
+  // se pierde el foco al escribir). reqId descarta respuestas viejas fuera de orden.
+  const list = document.getElementById("mlist");
+  let reqId = 0, rows = [];
+  async function load() {
+    const my = ++reqId;
+    const qs = new URLSearchParams({ month: fmonth.value,
+      ...(fq.value.trim() ? { q: fq.value.trim() } : {}) });
+    const txns = await api("/transactions?" + qs);
+    if (my !== reqId) return;  // llegó una respuesta más nueva → descarta esta
+    rows = txns;
+    const total = txns.filter((t) => t.direction === "cargo").reduce((s, t) => s + t.amount, 0);
+    list.innerHTML = `
+    <div class="card">
+      <div class="sub">${txns.length} movimientos · cargos del filtro: <b>${money(total)}</b></div>
+      ${txns.map((t) => `
+        <div class="row" data-id="${t.id}"><div class="l">
+          <div class="name">${t.category_emoji} ${esc(t.description)}</div>
+          <div class="meta">${fdate(t.date)} · ${esc(t.account)} · ${esc(t.category || "sin categoría")}${t.tags ? " · " + esc(t.tags) : ""}</div>
+          ${t.notes ? `<div class="meta" style="opacity:.85">📎 ${esc(t.notes)}</div>` : ""}
+        </div>
+        <div class="amt ${t.direction === "abono" ? "pos" : ""}">${t.direction === "abono" ? "+" : "−"}${money(t.amount)}</div>
+        </div>`).join("") || '<div class="sub">Sin movimientos con este filtro.</div>'}
+    </div>`;
+  }
+  list.addEventListener("click", (e) => {
     const row = e.target.closest(".row"); if (!row) return;
-    const t = txns.find((x) => x.id === +row.dataset.id);
-    if (t) editTxn(t, () => renderMovs(filters));
+    const t = rows.find((x) => x.id === +row.dataset.id);
+    if (t) editTxn(t, () => renderMovs({ month: fmonth.value, q: fq.value }));
   });
+  fmonth.onchange = load;
+  fq.oninput = debounce(load, 350);
+  load();
 }
 
 function editTxn(t, done) {
@@ -381,7 +405,7 @@ function editTxn(t, done) {
 
 async function renderPresupuesto() {
   const month = new Date().toISOString().slice(0, 7);
-  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  loading();
   const b = await api("/budget?month=" + month);
   const grupo = (kind, titulo) => {
     const rows = b.categorias.filter((c) => c.kind === kind);
@@ -456,11 +480,11 @@ function trendBars(trend) {
 }
 
 async function renderAsesor() {
-  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  loading();
   const ins = await api("/insights");
   const nivel = { bueno: "verde", info: "amarillo", alerta: "rojo" };
   const h = ins.health;
-  const salud = h.score >= 80 ? "verde" : h.score >= 60 ? "verde" : h.score >= 40 ? "amarillo" : "rojo";
+  const salud = h.score >= 60 ? "verde" : h.score >= 40 ? "amarillo" : "rojo";
   const mom = ins.mom || { movers: [] };
   const sugeridas = [
     "¿En qué 3 cosas puedo ahorrar sin sufrir?",
@@ -598,7 +622,7 @@ async function renderAsesor() {
 }
 
 async function renderMsi() {
-  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  loading();
   const d = await api("/msi");
   const activos = d.plans.filter((p) => p.status === "activo");
   $app.innerHTML = `
@@ -626,7 +650,7 @@ async function renderMsi() {
 }
 
 async function renderSubs() {
-  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  loading();
   const d = await api("/subscriptions");
   const badge = { activa: "verde", por_confirmar: "amarillo", cancelada: "rojo" };
   $app.innerHTML = `
@@ -646,7 +670,7 @@ async function renderSubs() {
 }
 
 async function renderMetas() {
-  $app.innerHTML = `<div class="loading">Cargando…</div>`;
+  loading();
   const goals = await api("/goals");
   $app.innerHTML = `
   <h1>Metas</h1>

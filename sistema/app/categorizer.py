@@ -1,8 +1,8 @@
 """Categorización automática por reglas de contraparte/comercio.
 
 Las reglas nacen del análisis real de los estados 2026 (docs 06–10 de la bóveda).
-El sistema aprende: al corregir una categoría, se puede guardar una regla nueva
-(tabla settings, clave rule:<patron>).
+El sistema aprende: al corregir una categoría, se guarda una regla nueva en la
+tabla `rules` (Rule.pattern = clave de comercio → categoría).
 """
 import re
 

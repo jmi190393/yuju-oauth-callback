@@ -110,7 +110,7 @@ h2 {
   color: var(--muted);
   margin: 22px 6px 8px;
 }
-.lead, p.sub, .justify { text-align: justify; text-justify: inter-word; hyphens: auto; }
+.lead, p.sub { text-align: justify; text-justify: inter-word; hyphens: auto; }
 
 /* ---------- Tarjetas ---------- */
 .card {
@@ -331,7 +331,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 
 /* ---------- Login ---------- */
 .login-wrap { padding-top: 13vh; max-width: 400px; margin: 0 auto; }
-.login-logo { text-align: center; font-size: 3rem; line-height: 1; margin-bottom: 10px; }
 .login-wrap h1 { text-align: center; font-size: 1.6rem; margin-bottom: 2px; }
 .login-wrap p.sub { text-align: center; margin: 0 0 24px; }
 .error { color: var(--bad); font-size: .85rem; margin-top: 12px; text-align: center; font-weight: 550; }
@@ -367,6 +366,3 @@ code {
   font-size: .82rem;
 }
 ::selection { background: var(--brand-soft); }
-
-/* Contenedores con scroll horizontal seguro */
-.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }

@@ -5,6 +5,7 @@ Validado contra 7 estados reales 2026 — concilia al centavo con los totales of
 import re
 
 import pdfplumber
+from ._util import money
 
 DATE_RE = re.compile(r"^\d{2}/[A-Z]{3}$")
 AMOUNT_RE = re.compile(r"^\d{1,3}(?:,\d{3})*\.\d{2}$")
@@ -66,10 +67,10 @@ def parse(path: str) -> dict:
                 period = (m.group(1), m.group(2))
             m = re.search(r"Saldo Anterior ([\d,]+\.\d{2})", text)
             if m:
-                saldo_ini = float(m.group(1).replace(",", ""))
+                saldo_ini = money(m.group(1))
             m = re.search(r"Saldo Final ([\d,]+\.\d{2})", text)
             if m:
-                saldo_fin = float(m.group(1).replace(",", ""))
+                saldo_fin = money(m.group(1))
 
             for ws in _group_lines(page.extract_words()):
                 texts = [w["text"] for w in ws]
@@ -115,7 +116,7 @@ def parse(path: str) -> dict:
         amount = m["cargo"] or m["abono"]
         if not amount:
             continue
-        val = float(amount.replace(",", ""))
+        val = money(amount)
         direction = "cargo" if m["cargo"] else "abono"
         if direction == "cargo":
             t_cargos += val

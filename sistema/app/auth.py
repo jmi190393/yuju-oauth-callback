@@ -14,19 +14,30 @@ from flask import g, jsonify, request
 
 from .models import User
 
-SECRET = os.environ.get("FINANZAS_SECRET", "")
-_SECRET_FILE = os.path.join(os.path.dirname(__file__), "..", ".secret")
-if not SECRET:
-    if os.path.exists(_SECRET_FILE):
-        SECRET = open(_SECRET_FILE).read().strip()
-    else:
-        SECRET = base64.urlsafe_b64encode(os.urandom(32)).decode()
-        try:
-            with open(_SECRET_FILE, "w") as f:
-                f.write(SECRET)
-        except OSError:
-            pass
+def _load_secret() -> str:
+    """Clave para firmar la sesión. Prioridad: variable de entorno
+    FINANZAS_SECRET (recomendado en producción y obligatoria con varios workers)
+    → archivo .secret persistente → valor efímero (último recurso: si el disco es
+    de solo lectura, la sesión no sobrevive al reinicio)."""
+    env = os.environ.get("FINANZAS_SECRET", "")
+    if env:
+        return env
+    try:
+        with open(_SECRET_FILE) as f:
+            return f.read().strip()
+    except OSError:
+        pass
+    secret = base64.urlsafe_b64encode(os.urandom(32)).decode()
+    try:
+        with open(_SECRET_FILE, "w") as f:
+            f.write(secret)
+    except OSError:
+        pass
+    return secret
 
+
+_SECRET_FILE = os.path.join(os.path.dirname(__file__), "..", ".secret")
+SECRET = _load_secret()
 SESSION_DAYS = 30
 COOKIE = "finanzas_session"
 
@@ -35,6 +46,12 @@ def hash_password(password: str, salt: bytes | None = None) -> str:
     salt = salt or os.urandom(16)
     dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 200_000)
     return base64.b64encode(salt).decode() + "$" + base64.b64encode(dk).decode()
+
+
+# Hash señuelo: se verifica cuando el usuario no existe, para que un login con
+# usuario inexistente tarde lo mismo que uno con contraseña incorrecta (evita
+# enumeración de usuarios por tiempo de respuesta).
+DUMMY_HASH = hash_password("timing-equalizer")
 
 
 def verify_password(password: str, stored: str) -> bool:

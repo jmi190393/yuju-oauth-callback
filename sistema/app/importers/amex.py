@@ -7,6 +7,7 @@ completo de planes de pagos diferidos / MSI.
 import re
 
 import pdfplumber
+from ._util import money
 
 MESES = {"enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
          "julio": 7, "agosto": 8, "septiembre": 9, "octubre": 10, "noviembre": 11,
@@ -46,8 +47,8 @@ def parse(path: str) -> dict:
     info["periodo"] = (f"{y1}-{m1n:02d}-{int(d1):02d}", f"{y}-{m2n:02d}-{int(d2):02d}")
 
     m = re.search(rf"({AMT})( CR)? - ({AMT}) \+ ({AMT}) = ({AMT})( CR)? ({AMT})( CR)?( {AMT})?", text)
-    e_abonos = float(m.group(3).replace(",", "")) if m else 0.0
-    e_cargos = float(m.group(4).replace(",", "")) if m else 0.0
+    e_abonos = money(m.group(3)) if m else 0.0
+    e_cargos = money(m.group(4)) if m else 0.0
     saldo_corte = (("-" if m.group(6) else "") + m.group(5)).replace(",", "") if m else None
 
     year_end = y
@@ -76,21 +77,23 @@ def parse(path: str) -> dict:
                 plans.append({
                     "merchant": pm.group(1).strip(),
                     "purchase_date": f"{pd_y}-{pd_m:02d}-{pd_d:02d}",
-                    "total_amount": float(pm.group(4).replace(",", "")),
-                    "pending": float(pm.group(6).replace(",", "")),
+                    "total_amount": money(pm.group(4)),
+                    "pending": money(pm.group(6)),
                     "payments_made": int(pm.group(7)),
                     "months": int(pm.group(8)),
-                    "monthly_payment": float(pm.group(9).replace(",", "")),
+                    "monthly_payment": money(pm.group(9)),
                 })
             continue
         tm = TXN_RE.match(line)
-        if tm and "Página" not in line:
+        # El grupo 2 es \w+ (no valida mes): si no es un mes real, no es una
+        # transacción → se trata como continuación en vez de reventar en _mes().
+        if tm and "Página" not in line and tm.group(2).lower() in MESES:
             if current:
                 txns.append(current)
             current = {
                 "date": fecha_iso(tm.group(1), tm.group(2)),
                 "description": tm.group(3).strip(),
-                "amount": float(tm.group(4).replace(",", "")),
+                "amount": money(tm.group(4)),
                 "direction": "abono" if tm.group(5) else "cargo",
                 "detail": "",
             }

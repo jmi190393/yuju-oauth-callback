@@ -42,13 +42,35 @@ Informe de arquitectura y calidad del sistema (Fase 1 MVP). Actualizado 2026-07-
 10. **Fórmulas verificadas contra el estándar de la industria** (ver [[05 Benchmark de apps]]): se corrigió la detección de recurrentes (exige **monto estable**, ya no marca gasto variable como suscripción) y se etiquetó la salud financiera honestamente como índice propio.
 11. **Lecturas numéricas blindadas** (`_setting_float`) y guardas contra división por cero en todos los indicadores nuevos.
 
+### Del tercer pase — auditoría integral de arquitecto (2026-07-22 · v1.9)
+Auditoría de **todo** el proyecto (3 revisiones en paralelo: importadores, backend, frontend). Se aplicó solo lo que aporta valor real; lo riesgoso sin red de pruebas se dejó documentado como recomendación.
+
+**Seguridad**
+12. **Cookie de sesión con `Secure`**: antes viajaba sin la marca `Secure`; ahora se activa en HTTPS (`secure=request.is_secure`) y se mantiene transparente en `http://localhost` para desarrollo. Sigue `HttpOnly` + `SameSite=Lax`.
+13. **Login de tiempo constante**: si el usuario no existe, ya no se saltaba el PBKDF2 (un usuario inexistente respondía más rápido → permitía enumerar cuentas). Ahora se verifica siempre un **hash señuelo** (`DUMMY_HASH`) → mismo tiempo de respuesta. Bootstrap de `SECRET` reescrito (lectura del archivo con `with`, sin fugas de descriptor; recomendado `FINANZAS_SECRET` con varios workers).
+
+**Escalabilidad (la palanca principal)**
+14. **Índices en `transactions.category_id` y `account_id`**: SQLite no indexa las llaves foráneas solas, y esas dos columnas se filtran/agrupan constantemente (uncategorized, `GROUP BY category_id` del presupuesto, join por cuenta). Añadidos como `index=True` **y** con `CREATE INDEX IF NOT EXISTS` al arranque (idempotente) → los índices llegan también a la `finanzas.db` **ya existente**, no solo a bases nuevas.
+
+**DRY / mantenimiento**
+15. **`_networth(tc)`**: el patrimonio consolidado estaba calculado igual en 3 lugares → un solo helper.
+16. **`money()` compartido en importadores**: `float(s.replace(",", ""))` estaba repetido **16 veces** en los 3 parsers → un helper (`importers/_util.py`), punto único para locale a futuro.
+17. **Frontend**: `renderMovs` reescrito al patrón "shell fija + recarga solo de `#mlist`" → **corrige un bug real** (el buscador perdía el foco en cada tecla) y una carrera de respuestas fuera de orden (guarda `reqId`). `show()` ahora **captura errores** de render (una vista que falla muestra un aviso con "Reintentar" en vez de dejar el spinner colgado para siempre). Helpers `loading()` y `debounce()` (quitan 8 y 2 repeticiones). Ternario redundante y 3 clases CSS muertas eliminados.
+
+**Robustez de importadores**
+18. **Amex ya no truena** ante una línea con forma de transacción pero cuyo "mes" no es un mes real (`_mes` lanzaba `KeyError` y abortaba todo el import): ahora se valida `tm.group(2) in MESES` y esas líneas se tratan como continuación.
+
+**Skips conscientes** (riesgo > valor sin la regresión de PDFs reales, que no corre en este entorno): refactor de doble extracción de páginas en BBVA, unificación de mapas de meses entre módulos, limpieza de grupos de captura de regex no usados. Quedan como recomendaciones futuras.
+
 ## 4. Verificación (regresión completa sobre datos reales)
 - **25/25 archivos** (18 estados 2026) importan y **concilian al centavo**; 0 fallos.
 - Dashboard: patrimonio **$3,532,045** ≈ tabla de [[09 Análisis Inversiones]] ✅.
 - MSI: pendiente **$136,602** · jul **$63,315** · ago **$56,758** = cifras de [[08 Análisis Amex 2026]] ✅.
 - Suscripciones activas: **$19,318/año** (AT&T + Telmex + iCloud + Claude anual) ✅.
 - `py_compile` de todo Python y `node --check` de sw.js: limpios. Login de ambos usuarios y dedupe (re-subida = 0 nuevos) probados.
-- **Suite del Asesor** (`tests/test_insights.py`, 13 casos, sin dependencias): tras el refactor de un solo escaneo, **13/13 en verde** → el comportamiento es idéntico al de antes. Corre con `python3 tests/test_insights.py`, también en PythonAnywhere sin instalar nada.
+- **Suite del Asesor** (`tests/test_insights.py`, 13 casos) + **suite de importadores** (`tests/test_importers.py`, 3 casos: `money()`, mapa de meses, detectores). Sin dependencias; **16/16 en verde** tras cada refactor → el comportamiento es idéntico. Corren en PythonAnywhere sin instalar nada.
+- **Cookie de sesión**: verificado que en HTTPS trae `Secure`+`HttpOnly`+`SameSite`, y en HTTP local no trae `Secure` (dev sigue funcionando). Índices `ix_transactions_category_id/account_id` verificados presentes tras el arranque.
+- **Frontend**: verificado con Chromium que el buscador de Movimientos **conserva el foco** al escribir y filtra en vivo (5→3 filas), y que el clic en una fila abre la edición.
 
 ## 5. Rendimiento y memoria
 - Import de un estado: ~1–3 s (dominado por pdfplumber; inevitable). El resto: consultas indexadas <10 ms con años de datos. El `joinedload` quitó el N+1 de la lista de movimientos.
@@ -65,7 +87,8 @@ Informe de arquitectura y calidad del sistema (Fase 1 MVP). Actualizado 2026-07-
 ## 7. Riesgos conocidos y mitigaciones
 | Riesgo | Mitigación |
 |---|---|
-| Los bancos cambian el layout del PDF | La conciliación lo detecta al instante (FAIL visible); se ajusta solo el parser afectado |
+| Los bancos cambian el layout del PDF | La conciliación lo detecta al instante (FAIL visible); se ajusta solo el parser afectado. Amex ya no aborta ante líneas ambiguas (v1.9) |
+| `SECRET` de sesión efímero con varios workers | En PythonAnywhere gratuito = 1 worker (no aplica). Recomendado fijar `FINANZAS_SECRET` si algún día se escala a varios procesos |
 | SQLite sin respaldo | Copiar `finanzas.db` = backup total; recomendado respaldo semanal |
 | Planes MSI derivados usan (comercio+monto+meses) como identidad | Dos compras idénticas del mismo monto colisionarían — caso raro, documentado |
 | Hosting gratuito duerme cada 3 meses | PythonAnywhere manda correo con botón "Run until 3 months from today" |
@@ -89,9 +112,9 @@ sistema/
   app/auth.py         sesión HMAC + PBKDF2 + login_required             (~90)
   app/categorizer.py  reglas declarativas de categorización            (~80)
   app/seed.py         datos reales iniciales                            (~150)
-  app/importers/      bbva · revolut · amex · detección                (~450)
-  static/             PWA completa (HTML+CSS+JS+SW, 0 dependencias)    (~1000)
-  tests/test_insights.py  suite del Asesor (13 casos, sin dependencias) (~230)
+  app/importers/      bbva · revolut · amex · _util(money) · detección (~460)
+  static/             PWA completa (HTML+CSS+JS+SW, 0 dependencias)    (~1010)
+  tests/              suite Asesor (13) + importadores (3), sin deps    (~290)
 ```
 ```
 Dependencias core: flask · sqlalchemy · pdfplumber

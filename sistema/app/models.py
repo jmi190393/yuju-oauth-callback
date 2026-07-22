@@ -51,13 +51,14 @@ class Category(Base):
 class Transaction(Base):
     __tablename__ = "transactions"
     id: Mapped[int] = mapped_column(primary_key=True)
-    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), index=True)
     date: Mapped[date] = mapped_column(Date, index=True)
     description: Mapped[str] = mapped_column(String(300))
     # positivo siempre; direction distingue cargo/abono
     amount: Mapped[float] = mapped_column(Float)
     direction: Mapped[str] = mapped_column(String(6))  # cargo | abono
-    category_id: Mapped[int | None] = mapped_column(ForeignKey("categories.id"), nullable=True)
+    category_id: Mapped[int | None] = mapped_column(
+        ForeignKey("categories.id"), nullable=True, index=True)
     tags: Mapped[str] = mapped_column(String(120), default="")  # csv: bebe,viaje,facturable
     source: Mapped[str] = mapped_column(String(20), default="manual")  # manual | import
     external_key: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)

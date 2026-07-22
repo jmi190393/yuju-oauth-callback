@@ -8,6 +8,7 @@ import io
 import re
 
 import pdfplumber
+from ._util import money
 
 MESES = {"ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
          "jul": 7, "ago": 8, "sept": 9, "sep": 9, "oct": 10, "nov": 11, "dic": 12}
@@ -42,11 +43,11 @@ def parse_credit(path: str) -> dict:
     m = re.search(r"Fecha límite de pago\d* \w+, (\d{1,2} \w{3,5}\.? \d{4})", text)
     info["fecha_limite"] = _to_iso(m.group(1)) if m else None
     m = re.search(r"Pago para no generar intereses\d* \$([\d,]+\.\d{2})", text)
-    info["pago_requerido"] = float(m.group(1).replace(",", "")) if m else None
+    info["pago_requerido"] = money(m.group(1)) if m else None
     m = re.search(r"Total cargos \+\$([\d,]+\.\d{2})", text)
-    e_cargos = float(m.group(1).replace(",", "")) if m else 0.0
+    e_cargos = money(m.group(1)) if m else 0.0
     m = re.search(r"Total abonos -\$([\d,]+\.\d{2})", text)
-    e_abonos = float(m.group(1).replace(",", "")) if m else 0.0
+    e_abonos = money(m.group(1)) if m else 0.0
 
     lines = text.split("\n")
     msi = []
@@ -57,9 +58,9 @@ def parse_credit(path: str) -> dict:
             msi.append({
                 "purchase_date": _to_iso(m.group(1)),
                 "merchant": m.group(2),
-                "total_amount": float(m.group(3).replace(",", "")),
-                "pending": float(m.group(4).replace(",", "")),
-                "monthly_payment": float(m.group(6).replace(",", "")),
+                "total_amount": money(m.group(3)),
+                "pending": money(m.group(4)),
+                "monthly_payment": money(m.group(6)),
                 "payments_made": int(m.group(7)),
                 "months": int(m.group(8)),
                 "card": card.group(1) if card else "",
@@ -75,7 +76,7 @@ def parse_credit(path: str) -> dict:
             current = {
                 "date": _to_iso(m.group(1)),
                 "description": m.group(3),
-                "amount": float(m.group(5).replace(",", "")),
+                "amount": money(m.group(5)),
                 "direction": "cargo" if m.group(4) == "+" else "abono",
                 "detail": [],
             }
