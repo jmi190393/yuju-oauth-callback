@@ -1,6 +1,6 @@
 # 13 · Arquitectura y calidad del código
 
-Informe de arquitectura y calidad del sistema (Fase 1 MVP). Actualizado 2026-07-21 tras el despliegue en la nube y un pase de optimización.
+Informe de arquitectura y calidad del sistema (Fase 1 MVP). Actualizado 2026-07-22 (v1.8) tras sumar el Asesor (consejos automáticos + IA) y un segundo pase de optimización de arquitecto.
 
 ## 1. Resumen ejecutivo
 - **Stack**: **Flask** (WSGI puro) + SQLAlchemy + SQLite, y una PWA en JavaScript puro **sin frameworks ni build step**. 3 dependencias en total.
@@ -37,24 +37,30 @@ Informe de arquitectura y calidad del sistema (Fase 1 MVP). Actualizado 2026-07-
 7. **N+1 en `/api/transactions`**: cada movimiento disparaba consultas extra por su cuenta/categoría. Añadido `joinedload` → 1 consulta en vez de ~200.
 8. **DRY**: la conversión USD→MXN repetida en 5 lugares se centralizó en `to_mxn()`.
 
+### Del segundo pase de optimización (2026-07-22 · v1.8)
+9. **Un solo escaneo para todo el Asesor**: la pantalla del Asesor calculaba gastos hormiga, recurrentes, alertas, tendencia y "mes vs mes" cada uno con su propia consulta → **4 escaneos completos de movimientos + 8 agregaciones mensuales + ~6 lecturas de categorías**. Se refactorizó a **un único `_load_cargos()` + un índice de comercios (`_spend_index`) + una carga de categorías**, y todo lo demás se deriva en memoria. Fuente única de agrupación por comercio → menos código y menos por mantener. Comportamiento idéntico (garantizado por la suite de pruebas).
+10. **Fórmulas verificadas contra el estándar de la industria** (ver [[05 Benchmark de apps]]): se corrigió la detección de recurrentes (exige **monto estable**, ya no marca gasto variable como suscripción) y se etiquetó la salud financiera honestamente como índice propio.
+11. **Lecturas numéricas blindadas** (`_setting_float`) y guardas contra división por cero en todos los indicadores nuevos.
+
 ## 4. Verificación (regresión completa sobre datos reales)
 - **25/25 archivos** (18 estados 2026) importan y **concilian al centavo**; 0 fallos.
 - Dashboard: patrimonio **$3,532,045** ≈ tabla de [[09 Análisis Inversiones]] ✅.
 - MSI: pendiente **$136,602** · jul **$63,315** · ago **$56,758** = cifras de [[08 Análisis Amex 2026]] ✅.
 - Suscripciones activas: **$19,318/año** (AT&T + Telmex + iCloud + Claude anual) ✅.
 - `py_compile` de todo Python y `node --check` de sw.js: limpios. Login de ambos usuarios y dedupe (re-subida = 0 nuevos) probados.
+- **Suite del Asesor** (`tests/test_insights.py`, 13 casos, sin dependencias): tras el refactor de un solo escaneo, **13/13 en verde** → el comportamiento es idéntico al de antes. Corre con `python3 tests/test_insights.py`, también en PythonAnywhere sin instalar nada.
 
 ## 5. Rendimiento y memoria
 - Import de un estado: ~1–3 s (dominado por pdfplumber; inevitable). El resto: consultas indexadas <10 ms con años de datos. El `joinedload` quitó el N+1 de la lista de movimientos.
 - Un solo proceso, ~50 MB RAM (Flask es más ligero que FastAPI+uvicorn+a2wsgi). Sirve para cualquier plan gratuito.
 
-## 6. Impacto del pase
+## 6. Impacto de los pases de optimización
 | Dimensión | Impacto |
 |---|---|
-| Rendimiento | Lista de movimientos O(1) consultas en vez de O(n); menos overhead de framework |
-| Memoria | Menor (3 deps vs 6; sin event loop ASGI) |
-| Mantenimiento | −código muerto, −repetición (to_mxn), routing Flask más simple de leer |
-| Escalabilidad | Igual de escalable; Postgres a 1 variable de entorno cuando haga falta |
+| Rendimiento | Lista de movimientos O(1) consultas en vez de O(n); **Asesor de ~18 consultas de movimientos/categorías a 2** (1 escaneo + 1 carga de categorías, resto en memoria); menos overhead de framework |
+| Memoria | Menor (3 deps core vs 6; sin event loop ASGI). El Asesor carga los cargos una vez por request y los libera al terminar |
+| Mantenimiento | −código muerto, −repetición (`to_mxn`, `_spend_index` como fuente única de agrupación), routing Flask simple, **suite de pruebas** que fija el comportamiento |
+| Escalabilidad | El Asesor ya no crece en nº de consultas al agregar indicadores (todos leen del mismo escaneo). Postgres a 1 variable de entorno cuando haga falta |
 
 ## 7. Riesgos conocidos y mitigaciones
 | Riesgo | Mitigación |
@@ -69,7 +75,7 @@ Informe de arquitectura y calidad del sistema (Fase 1 MVP). Actualizado 2026-07-
 2. Respaldo automático semanal de la BD a almacenamiento privado.
 3. Bot WhatsApp (Meta Cloud API) reutilizando `POST /api/transactions` tal cual.
 4. Alertas push (Web Push está listo por ser PWA con service worker).
-5. Tests automatizados de los parsers con PDFs sintéticos (los reales no pueden ir al repo).
+5. Tests automatizados de los parsers con PDFs sintéticos (los reales no pueden ir al repo). *(El Asesor ya tiene suite propia; falta la de importadores.)*
 
 ## 9. Mapa del código
 ```
@@ -77,14 +83,17 @@ sistema/
   wsgi.py             expone la app Flask (WSGI nativo, sin puentes)   (~10 líneas)
   run.py              arranque local                                    (~10)
   app/main.py         Flask: estáticos, SPA, sesión de BD, siembra      (~45)
-  app/api.py          blueprint /api (todas las rutas REST)             (~520)
+  app/api.py          blueprint /api (rutas REST + Asesor)              (~700)
+  app/advisor.py      capa de IA (Claude): ai_available + ask_advisor   (~45)
   app/models.py       9 tablas SQLAlchemy                               (~160)
   app/auth.py         sesión HMAC + PBKDF2 + login_required             (~90)
   app/categorizer.py  reglas declarativas de categorización            (~80)
   app/seed.py         datos reales iniciales                            (~150)
   app/importers/      bbva · revolut · amex · detección                (~450)
-  static/             PWA completa (HTML+CSS+JS+SW, 0 dependencias)    (~900)
+  static/             PWA completa (HTML+CSS+JS+SW, 0 dependencias)    (~1000)
+  tests/test_insights.py  suite del Asesor (13 casos, sin dependencias) (~230)
 ```
 ```
-Dependencias: flask · sqlalchemy · pdfplumber
+Dependencias core: flask · sqlalchemy · pdfplumber
+Opcional (solo chat con IA del Asesor): anthropic
 ```

@@ -20,7 +20,7 @@ from .models import (Account, Category, Goal, ImportBatch, MsiPlan, Provision,
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
-APP_VERSION = "1.7"
+APP_VERSION = "1.8"
 GASTO_KINDS = ("fijo", "variable", "aprovisionamiento")
 
 
@@ -863,68 +863,56 @@ def _fmt(n):
     return f"${n:,.2f}"
 
 
-def _months_of_data():
-    """Meses distintos con movimientos de gasto (para promediar a mensual)."""
-    meses = {d.strftime("%Y-%m")
-             for (d,) in db().query(Transaction.date)
-             .filter(Transaction.direction == "cargo").all()}
-    return meses
-
-
-def _gastos_hormiga(n_meses):
-    """Comercios con muchas compras chicas: el goteo que no se siente pero suma.
-
-    Criterio: mismo comercio (clave que ignora el número final) con 4+ cargos
-    y ticket promedio ≤ $600. Devuelve el equivalente MENSUAL para dimensionar
-    el ahorro potencial. Excluye categorías estructurales (no son fugas).
-    """
-    estructural = {c.id for c in db().query(Category)
-                   if c.kind in ("ingreso", "transferencia", "inversion", "fijo")}
-    rows = db().query(Transaction.description, Transaction.amount,
-                      Transaction.category_id) \
+def _load_cargos():
+    """Todos los cargos (gasto) en memoria, con UNA sola consulta. Es la base de
+    casi todos los indicadores del Asesor (hormiga, recurrentes, alertas,
+    tendencia, mes vs mes), así no se escanea la tabla una vez por indicador."""
+    return db().query(Transaction.description, Transaction.date,
+                      Transaction.amount, Transaction.category_id) \
         .filter(Transaction.direction == "cargo").all()
-    groups = {}
-    for desc, amount, cid in rows:
-        if cid in estructural:
+
+
+def _spend_index(cargos, non):
+    """Agrupa los cargos por comercio (clave que ignora el número que cambia),
+    excluyendo categorías estructurales (transferencias, inversión, ingreso).
+    Fuente ÚNICA para hormiga, recurrentes y alertas.
+    Devuelve {clave: [(fecha, monto, category_id, descripción), ...]}."""
+    idx = {}
+    for desc, d, amt, cid in cargos:
+        if cid in non:
             continue
-        key = merchant_key(desc)
-        gp = groups.setdefault(key, {"count": 0, "total": 0.0, "variants": set(),
-                                     "cats": {}})
-        gp["count"] += 1
-        gp["total"] += amount
-        gp["variants"].add(desc)
-        if cid is not None:
-            gp["cats"][cid] = gp["cats"].get(cid, 0) + 1
-    names = {c.id: c.name for c in db().query(Category)}
+        idx.setdefault(merchant_key(desc), []).append((d, amt, cid, desc))
+    return idx
+
+
+def _gastos_hormiga(idx, n_meses, fijo, names):
+    """Comercios con muchas compras chicas: el goteo que no se siente pero suma.
+    4+ cargos y ticket promedio ≤ $600. Excluye fijos (no son fugas). Devuelve el
+    equivalente mensual/anual para dimensionar el ahorro."""
     out = []
-    for gp in groups.values():
-        avg = gp["total"] / gp["count"]
-        if gp["count"] >= 4 and avg <= 600:
-            dom = max(gp["cats"], key=gp["cats"].get) if gp["cats"] else None
-            out.append({
-                "description": min(gp["variants"], key=len),
-                "count": gp["count"], "avg": round(avg, 2),
-                "total": round(gp["total"], 2),
-                "mensual": round(gp["total"] / n_meses, 2),
-                "anual": round(gp["total"] / n_meses * 12, 2),
-                "category": names.get(dom, "(sin categoría)"),
-            })
+    for items in idx.values():
+        items = [it for it in items if it[2] not in fijo]
+        n = len(items)
+        if n < 4:
+            continue
+        total = sum(it[1] for it in items)
+        avg = total / n
+        if avg > 600:
+            continue
+        cats = {}
+        for _, _, cid, _ in items:
+            if cid is not None:
+                cats[cid] = cats.get(cid, 0) + 1
+        dom = max(cats, key=cats.get) if cats else None
+        out.append({
+            "description": min((it[3] for it in items), key=len),
+            "count": n, "avg": round(avg, 2), "total": round(total, 2),
+            "mensual": round(total / n_meses, 2),
+            "anual": round(total / n_meses * 12, 2),
+            "category": names.get(dom, ("", "(sin categoría)"))[1],
+        })
     out.sort(key=lambda x: -x["mensual"])
     return out
-
-
-def _nonspend_ids():
-    """Categorías que NO son gasto real (ingreso, transferencias, inversión)."""
-    return {c.id for c in db().query(Category)
-            if c.kind in ("ingreso", "transferencia", "inversion")}
-
-
-def _spent_by_category(month):
-    start, end = _month_bounds(month)
-    return dict(db().query(Transaction.category_id, func.sum(Transaction.amount))
-                .filter(Transaction.date >= start, Transaction.date <= end,
-                        Transaction.direction == "cargo")
-                .group_by(Transaction.category_id).all())
 
 
 def _safe_to_spend(b, month):
@@ -944,35 +932,34 @@ def _safe_to_spend(b, month):
             "dias_restantes": dias_rest}
 
 
-def _spending_trend(n=6):
+def _spending_trend(cargos, non, n=6):
     """Gasto real por mes en los últimos n meses (para la mini-gráfica)."""
     this = date.today().strftime("%Y-%m")
-    non = _nonspend_ids()
-    out = []
-    for i in range(n - 1, -1, -1):
-        m = _add_months(this, -i)
-        start, end = _month_bounds(m)
-        rows = db().query(Transaction.category_id, func.sum(Transaction.amount)) \
-            .filter(Transaction.date >= start, Transaction.date <= end,
-                    Transaction.direction == "cargo") \
-            .group_by(Transaction.category_id).all()
-        total = sum(float(a) for cid, a in rows if cid not in non)
-        out.append({"month": m, "gasto": round(total, 2)})
-    return out
+    totals = {_add_months(this, -i): 0.0 for i in range(n - 1, -1, -1)}
+    for _, d, amt, cid in cargos:
+        if cid in non:
+            continue
+        m = d.strftime("%Y-%m")
+        if m in totals:
+            totals[m] += amt
+    return [{"month": m, "gasto": round(totals[m], 2)} for m in totals]
 
 
-def _mom(month):
+def _mom(cargos, non, names, month):
     """Comparativo mes vs mes por categoría (estilo Copilot): qué subió/bajó."""
     prev = _add_months(month, -1)
-    cur, pre = _spent_by_category(month), _spent_by_category(prev)
-    non = _nonspend_ids()
-    names = {c.id: (c.emoji, c.name) for c in db().query(Category)}
-    movers = []
-    for cid in set(cur) | set(pre):
+    cur, pre = {}, {}
+    for _, d, amt, cid in cargos:
         if cid is None or cid in non:
             continue
-        c = float(cur.get(cid) or 0)
-        p = float(pre.get(cid) or 0)
+        m = d.strftime("%Y-%m")
+        if m == month:
+            cur[cid] = cur.get(cid, 0) + amt
+        elif m == prev:
+            pre[cid] = pre.get(cid, 0) + amt
+    movers = []
+    for cid in set(cur) | set(pre):
+        c, p = cur.get(cid, 0), pre.get(cid, 0)
         if abs(c - p) < 1:  # sin cambio relevante → no es un "movimiento"
             continue
         emoji, name = names.get(cid, ("❓", "(sin categoría)"))
@@ -1012,62 +999,41 @@ def _is_stable(amts):
     return cv < 0.15
 
 
-def _recurrentes():
+def _recurrentes(idx, subs_norm):
     """Cargos que se repiten mes con mes CON MONTO ESTABLE (estilo Rocket Money):
     posibles suscripciones o servicios que quizá no tienes en la lista. Excluye
     los ya registrados como suscripción y los de monto muy variable (esos son
     gasto variable, no un cargo recurrente)."""
-    non = _nonspend_ids()
-    rows = db().query(Transaction.description, Transaction.date,
-                      Transaction.amount, Transaction.category_id) \
-        .filter(Transaction.direction == "cargo").all()
-    groups = {}
-    for desc, d, amt, cid in rows:
-        if cid in non:
-            continue
-        k = merchant_key(desc)
-        gp = groups.setdefault(k, {"variants": set(), "months": set(), "amts": []})
-        gp["variants"].add(desc)
-        gp["months"].add(d.strftime("%Y-%m"))
-        gp["amts"].append(amt)
-    subs = [normalize(s.name) for s in db().query(Subscription) if s.name]
     out = []
-    for gp in groups.values():
-        if len(gp["months"]) < 3 or not _is_stable(gp["amts"]):
+    for items in idx.values():
+        months = {it[0].strftime("%Y-%m") for it in items}
+        amts = [it[1] for it in items]
+        if len(months) < 3 or not _is_stable(amts):
             continue
-        name = min(gp["variants"], key=len)
+        name = min((it[3] for it in items), key=len)
         nn = normalize(name)
-        if any(nn and (nn in s or s in nn) for s in subs):
+        if any(nn and (nn in s or s in nn) for s in subs_norm):
             continue
-        tipico = round(_median(gp["amts"]), 2)  # mediana: más robusta que el promedio
-        out.append({"description": name, "months": len(gp["months"]),
+        tipico = round(_median(amts), 2)  # mediana: más robusta que el promedio
+        out.append({"description": name, "months": len(months),
                     "avg": tipico, "anual": round(tipico * 12, 2)})
     out.sort(key=lambda x: -x["anual"])
     return out[:8]
 
 
-def _alertas_inusuales(dias=75):
+def _alertas_inusuales(idx, dias=75):
     """Cobros anómalos (estilo Fintonic): un cargo mucho más grande de lo normal
     para ese comercio. Compara cada cargo reciente contra la mediana histórica de
     su comercio; marca los que la superan 2.5x (y son montos relevantes)."""
-    non = _nonspend_ids()
-    rows = db().query(Transaction.description, Transaction.date, Transaction.amount,
-                      Transaction.category_id).filter(Transaction.direction == "cargo").all()
-    hist = {}
-    for desc, d, amt, cid in rows:
-        if cid in non:
-            continue
-        hist.setdefault(merchant_key(desc), []).append((d, amt, desc))
     corte = date.today() - timedelta(days=dias)
     out = []
-    for amts in hist.values():
-        montos = [a for _, a, _ in amts]
-        if len(montos) < 3:
+    for items in idx.values():
+        if len(items) < 3:
             continue
-        med = _median(montos)
+        med = _median([it[1] for it in items])
         if med <= 0:
             continue
-        for d, amt, desc in amts:
+        for d, amt, _, desc in items:
             if d >= corte and amt >= 2.5 * med and amt >= 500:
                 out.append({"description": desc, "date": d.isoformat(),
                             "amount": round(amt, 2), "tipico": round(med, 2),
@@ -1113,17 +1079,27 @@ def _health_score(b, ins):
 
 
 def _insights():
-    """Diagnóstico automático (gratis, siempre funciona). Sin IA."""
-    meses = _months_of_data()
-    n_meses = max(len(meses), 1)
+    """Diagnóstico automático (gratis, siempre funciona). Sin IA.
+
+    Carga los cargos y las categorías UNA sola vez y deriva todos los
+    indicadores en memoria (un escaneo, no uno por indicador)."""
     month = date.today().strftime("%Y-%m")
     b = _budget(month)
     tc = _tc_usd()
 
+    cargos = _load_cargos()
+    n_meses = max(len({d.strftime("%Y-%m") for _, d, _, _ in cargos}), 1)
+    cats = db().query(Category).all()
+    non = {c.id for c in cats if c.kind in ("ingreso", "transferencia", "inversion")}
+    fijo = {c.id for c in cats if c.kind == "fijo"}
+    names = {c.id: (c.emoji, c.name) for c in cats}
+    idx = _spend_index(cargos, non)
+    subs_norm = [normalize(s.name) for s in db().query(Subscription) if s.name]
+
     tips = []
 
     # 1) Gastos hormiga
-    hormiga = _gastos_hormiga(n_meses)
+    hormiga = _gastos_hormiga(idx, n_meses, fijo, names)
     total_hormiga_mes = round(sum(h["mensual"] for h in hormiga), 2)
     if hormiga:
         top = hormiga[0]
@@ -1216,10 +1192,10 @@ def _insights():
         "gastos_hormiga_anual": round(total_hormiga_mes * 12, 2),
         "_subs_anual": round(anual_subs, 2),
         "safe_to_spend": _safe_to_spend(b, month),
-        "trend": _spending_trend(6),
-        "mom": _mom(month),
-        "recurrentes": _recurrentes(),
-        "alertas": _alertas_inusuales(),
+        "trend": _spending_trend(cargos, non),
+        "mom": _mom(cargos, non, names, month),
+        "recurrentes": _recurrentes(idx, subs_norm),
+        "alertas": _alertas_inusuales(idx),
         "metas": _goals_list(b["sobrante_real_proyectado"]),
     }
     data["health"] = _health_score(b, data)

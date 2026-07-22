@@ -3,7 +3,7 @@
 Historial de construcción, despliegue y evolución del sistema. La versión instalada siempre se puede ver dentro de la app en **Más → Actualizar programa**.
 
 ## Estado actual
-- **Versión**: 1.7
+- **Versión**: 1.8
 - **En vivo**: `https://jmi190393.pythonanywhere.com` (PythonAnywhere, plan gratuito)
 - **Stack**: Flask + SQLAlchemy + SQLite · PWA en JavaScript puro (0 dependencias front) · 3 dependencias core + `anthropic` opcional (solo para el chat con IA del Asesor)
 - **Datos**: 972 movimientos de 2026 cargados (25 estados de 10 instituciones), conciliados al centavo
@@ -24,6 +24,7 @@ Historial de construcción, despliegue y evolución del sistema. La versión ins
 | 1.4 | **Rediseño UX completo** (sistema de diseño, light/dark, texto justificado, micro-interacciones). **Agrupar misma empresa**: ignora el número que cambia ("UBER TRIP 4821" = "UBER TRIP 9930"). Limpieza de arquitecto (código muerto, `pyflakes` limpio). |
 | 1.5 | **Asesor** (Más → Asesor). Consejos automáticos gratis: **detector de gastos hormiga** (mismo comercio, 4+ compras chicas, equivalente mensual/anual), costo anual de suscripciones, meses para el fondo de emergencia con el sobrante, mes pico de MSI, concentración de riesgo. **Chat con IA (Claude, `claude-opus-4-8`)** que solo recibe un resumen agregado (nunca cuentas ni movimientos) y degrada con gracia si no hay clave/red. Nueva dependencia opcional `anthropic`. |
 | 1.6 | **Lo mejor de las mejores apps**, adaptado: **Puedo gastar hoy** (safe-to-spend por día, estilo PocketGuard) en Inicio; **Salud financiera 0–100** con 5 componentes; **Tendencia de gasto** de 6 meses (mini-gráfica SVG sin dependencias); **comparativo mes vs mes** por categoría (estilo Copilot); **detección de cargos recurrentes** no registrados como suscripción (estilo Rocket Money). Todo alimenta también el resumen que ve la IA. Sin tablas nuevas ni dependencias. |
+| 1.8 | **Pase de optimización de arquitecto** (sin cambios visibles): el Asesor pasó de ~4 escaneos de movimientos + 8 agregaciones + 6 lecturas de categorías a **un solo escaneo + una carga de categorías**, con `_spend_index` como fuente única de agrupación por comercio (menos código, menos por mantener, escala al agregar indicadores). Comportamiento idéntico, verificado por la suite (13/13). Ver [[13 Arquitectura y calidad del código]]. |
 | 1.7 | **Robustez + fórmulas verificadas contra el estándar de la industria** (ver [[05 Benchmark de apps]]). Nuevas: **Alertas de cobros inusuales** (un cargo ≥2.5× lo típico de ese comercio, estilo Fintonic) y **metas con fecha proyectada** (aporte requerido/mes + fecha estimada al ritmo del sobrante). Correcciones tras investigar la metodología real: recurrentes ahora exigen **monto estable** (no marca como suscripción un gasto variable); safe-to-spend divide entre **días restantes**; salud financiera **etiquetada honestamente** como índice propio. **Suite de pruebas automatizadas** (`tests/test_insights.py`, 13 casos, sin dependencias) y lecturas numéricas blindadas. |
 
 ## Cómo se prueba cada versión
