@@ -94,5 +94,8 @@ Se entregaron archivos `.ics` con alarmas mensuales:
 - **Subir estados**: día 9 (Amex Gold), 15 (BBVA), 26 (Amex Platinum), 1 (Revolut).
 - **Pago de tarjeta (4 días antes)**: día 13 (Platinum), 16 (Revolut), 19 (Gold).
 
-## Qué sigue (Fase 2)
-Bot de WhatsApp (texto o foto del ticket), OCR, módulo de facturación CFDI con recordatorios, alertas push. Ver [[03 Blueprint del sistema]] y la bitácora [[15 Bitácora y versiones]].
+## 💬 Bot de WhatsApp (v2.0)
+Manda `150 uber` por WhatsApp y el gasto queda registrado y categorizado; `como voy` te responde el resumen del mes; `borrar` deshace. Solo funciona para sus 2 números. La guía de conexión (cuenta de Meta, 20 min, una sola vez) está en [[16 Bot de WhatsApp]].
+
+## Qué sigue (Fase 2.1)
+Foto del ticket (OCR), módulo de facturación CFDI con recordatorios, alertas push. Ver [[03 Blueprint del sistema]] y la bitácora [[15 Bitácora y versiones]].

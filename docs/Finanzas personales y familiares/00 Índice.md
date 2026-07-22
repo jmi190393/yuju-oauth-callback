@@ -21,7 +21,8 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 - [[12 Manual del sistema]] — Cómo usar la PWA: pantallas, catálogo asistido, importación, actualización.
 - [[13 Arquitectura y calidad del código]] — Stack (Flask), decisiones, revisión de calidad y riesgos.
 - [[14 Despliegue en PythonAnywhere]] — Guía paso a paso para publicar/actualizar en la nube.
-- [[15 Bitácora y versiones]] — Historial de versiones (1.0→1.4), despliegue, respaldo.
+- [[15 Bitácora y versiones]] — Historial de versiones (1.0→2.0), despliegue, respaldo.
+- [[16 Bot de WhatsApp]] — Captura de gastos por WhatsApp: guía de configuración en Meta paso a paso.
 
 ## Estado del proyecto
 
@@ -33,7 +34,7 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 | Resumen ejecutivo | ✅ Entregado (2026-07-21) |
 | Cuestionario final | ✅ Cerrado (2026-07-21) — 25/25 respondidas |
 | Construcción MVP | ✅ **Fase 1 construida** (2026-07-21) — carpeta `sistema/`, ver [[12 Manual del sistema]] |
-| Despliegue en la nube | ✅ **EN VIVO** en PythonAnywhere · v1.9.2 · datos 2026 cargados |
+| Despliegue en la nube | ✅ **EN VIVO** en PythonAnywhere · v2.0 · datos 2026 cargados |
 | Mejoras UX + catálogo asistido | ✅ v1.1→1.4 (ver [[15 Bitácora y versiones]]) |
 | Asesor (ahorro automático + IA) | ✅ v1.5 — gastos hormiga + chat con Claude (ver [[12 Manual del sistema]]) |
 | Lo mejor de las mejores apps | ✅ v1.6 — salud financiera, puedo gastar hoy, tendencia, mes vs mes, recurrentes |
@@ -42,4 +43,5 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 | Auditoría integral | ✅ v1.9 — seguridad (cookie Secure, login constante), índices, DRY, fix del buscador, suite de importadores ([[13 Arquitectura y calidad del código]]) |
 | Regresión real de importadores | ✅ v1.9.1 — 25/25 estados reales concilian; hash idéntico tras cerrar los refactors pospuestos |
 | Auditoría dedicada de api.py | ✅ v1.9.2 — asesor con IA sin cálculos dobles, API sin claves internas, buscadores sin carreras |
-| Fase 2 (WhatsApp + facturación) | ⏸ Pendiente (al regreso del viaje) |
+| Fase 2 — Bot de WhatsApp | 🚧 **v2.0 construido y probado** — falta conectar la cuenta de Meta ([[16 Bot de WhatsApp]], pasos A–D) |
+| Fase 2 — Facturación CFDI + OCR tickets | ⏸ Siguiente |

@@ -123,6 +123,7 @@ sistema/
   app/main.py         Flask: estáticos, SPA, sesión de BD, siembra      (~45)
   app/api.py          blueprint /api (rutas REST + Asesor)              (~700)
   app/advisor.py      capa de IA (Claude): ai_available + ask_advisor   (~45)
+  app/whatsapp.py     bot de WhatsApp (webhook firmado, captura, comandos) (~200)
   app/models.py       9 tablas SQLAlchemy                               (~160)
   app/auth.py         sesión HMAC + PBKDF2 + login_required             (~90)
   app/categorizer.py  reglas declarativas de categorización            (~80)

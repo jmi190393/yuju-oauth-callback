@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from .api import bp  # importa .auth y .models de forma transitiva
 from .db import Base, SessionLocal, engine
 from .seed import seed
+from .whatsapp import wa
 
 STATIC_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "static"))
 
@@ -24,6 +25,7 @@ _INDEXES = (
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="/static")
 app.register_blueprint(bp)
+app.register_blueprint(wa)
 
 # Inicialización (una vez por proceso): tablas + índices + siembra.
 Base.metadata.create_all(engine)
