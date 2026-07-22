@@ -20,7 +20,7 @@ from .models import (Account, Category, Goal, ImportBatch, MsiPlan, Provision,
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
-APP_VERSION = "1.9.1"
+APP_VERSION = "1.9.2"
 GASTO_KINDS = ("fijo", "variable", "aprovisionamiento")
 
 
@@ -105,6 +105,12 @@ def _add_months(month: str, n: int) -> str:
 def _plan_unpaid_months(plan: MsiPlan):
     return [(_add_months(plan.first_month, i), plan.monthly_payment)
             for i in range(plan.payments_made, plan.months)]
+
+
+def _msi_pending():
+    """Deuda MSI total pendiente (suma de mensualidades no pagadas de planes activos)."""
+    return sum(sum(x[1] for x in _plan_unpaid_months(p))
+               for p in db().query(MsiPlan).filter(MsiPlan.status == "activo"))
 
 
 def _txn_key(account_id, d, desc, amount, direction):
@@ -620,8 +626,7 @@ def dashboard():
     upcoming.sort(key=lambda x: x["date"])
 
     networth = _networth(tc)
-    msi_pending = sum(sum(x[1] for x in _plan_unpaid_months(p))
-                      for p in db().query(MsiPlan).filter(MsiPlan.status == "activo"))
+    msi_pending = _msi_pending()
     por_catalogar = db().query(func.count(Transaction.id)).filter(
         Transaction.category_id.is_(None), Transaction.direction == "cargo").scalar() or 0
     umbral = 0.8 * (b["fijos_plan"] + b["variables_plan"] + b["aprovisionamiento"])
@@ -1198,6 +1203,7 @@ def _insights():
         "gastos_hormiga_mensual": total_hormiga_mes,
         "gastos_hormiga_anual": round(total_hormiga_mes * 12, 2),
         "_subs_anual": round(anual_subs, 2),
+        "_b": b,
         "safe_to_spend": _safe_to_spend(b, month),
         "trend": _spending_trend(cargos, non),
         "mom": _mom(cargos, non, names, month),
@@ -1221,9 +1227,10 @@ def _insights():
 
 def _advisor_summary(ins):
     """Resumen AGREGADO en español para la IA. Nunca números de cuenta ni
-    movimientos individuales: solo totales y categorías."""
-    month = date.today().strftime("%Y-%m")
-    b = _budget(month)
+    movimientos individuales: solo totales y categorías. Reutiliza el
+    presupuesto y los totales que _insights ya calculó (claves privadas "_")."""
+    month = ins["generated_for"]
+    b = ins["_b"]
     tc = _tc_usd()
     L = []
     L.append(f"Mes en curso: {month}.")
@@ -1243,19 +1250,16 @@ def _advisor_summary(ins):
                  "; ".join(f"{c['name']} {_fmt(c['spent'])}" for c in cats) + ".")
 
     # Patrimonio y MSI
-    patrimonio = _networth(tc)
-    msi_pending = sum(sum(x[1] for x in _plan_unpaid_months(p))
-                      for p in db().query(MsiPlan).filter(MsiPlan.status == "activo"))
-    L.append(f"Patrimonio consolidado: {_fmt(patrimonio)}. Deuda MSI pendiente: "
-             f"{_fmt(msi_pending)}.")
+    L.append(f"Patrimonio consolidado: {_fmt(_networth(tc))}. Deuda MSI pendiente: "
+             f"{_fmt(_msi_pending())}.")
 
-    # Suscripciones
-    subs = db().query(Subscription).filter(Subscription.status == "activa").all()
-    anual_subs = sum(to_mxn(s.amount, s.currency, tc) *
-                     (12 if s.frequency == "mensual" else 1) for s in subs)
-    if subs:
-        L.append(f"Suscripciones activas ({len(subs)}): {_fmt(anual_subs)} al año. "
-                 "Nombres: " + ", ".join(s.name for s in subs) + ".")
+    # Suscripciones (total ya calculado por _insights; aquí solo los nombres)
+    nombres = [s.name for s in db().query(Subscription)
+               .filter(Subscription.status == "activa")]
+    if nombres:
+        L.append(f"Suscripciones activas ({len(nombres)}): "
+                 f"{_fmt(ins['_subs_anual'])} al año. "
+                 "Nombres: " + ", ".join(nombres) + ".")
 
     # Gastos hormiga
     if ins["gastos_hormiga"]:
@@ -1265,8 +1269,8 @@ def _advisor_summary(ins):
                  f"{_fmt(ins['gastos_hormiga_mensual'])}/mes "
                  f"({_fmt(ins['gastos_hormiga_anual'])}/año). Principales: {top}.")
 
-    # Metas
-    metas = _goals_list()
+    # Metas (ya calculadas por _insights, con proyección)
+    metas = ins["metas"]
     if metas:
         L.append("Metas: " + "; ".join(
             f"{m['name']} {m['pct']}% ({_fmt(m['current_amount'])} de {_fmt(m['target_amount'])})"
@@ -1308,8 +1312,11 @@ def _advisor_summary(ins):
 @bp.get("/insights")
 @login_required
 def insights():
-    """Consejos automáticos (gratis, sin IA). Siempre responde."""
-    data = _insights()
+    """Consejos automáticos (gratis, sin IA). Siempre responde.
+
+    Las claves privadas "_" son cálculos intermedios para el asesor con IA;
+    no forman parte de la respuesta pública."""
+    data = {k: v for k, v in _insights().items() if not k.startswith("_")}
     data["ai_available"] = ai_available()
     return jsonify(data)
 

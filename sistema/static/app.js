@@ -234,9 +234,12 @@ async function renderComercios() {
   <div class="card"><input id="mq" placeholder="Busca un comercio… (ej. Uber, Amazon)"></div>
   <div id="mlist"><div class="loading">Cargando…</div></div>`;
   mq.oninput = debounce(load, 300);
+  let reqId = 0;
   async function load() {
+    const my = ++reqId;
     const q = mq.value.trim();
     const items = await api("/merchants" + (q ? "?q=" + encodeURIComponent(q) : ""));
+    if (my !== reqId) return;  // llegó una búsqueda más nueva → descarta esta
     document.getElementById("mlist").innerHTML = items.length ? items.map((m) => `
       <div class="card" data-desc="${esc(m.description)}">
         <div class="name">${esc(m.description)}</div>

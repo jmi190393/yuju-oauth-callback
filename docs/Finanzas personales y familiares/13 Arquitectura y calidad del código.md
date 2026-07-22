@@ -69,6 +69,14 @@ Se recuperaron los **25 estados reales** de la sesión y se construyó `tests/te
 21. **Guardas**: `_to_iso` de Revolut lanza `ValueError` claro (antes `AttributeError` opaco si el patrón derivara); el CSV de débito ignora filas con `Importe` vacío en vez de tronar; `last4` de Amex sin un `.replace` muerto.
 La regresión queda **permanente** en `tests/` (se salta sola donde no hay PDFs, p. ej. PythonAnywhere).
 
+### De la cuarta pasada — auditoría dedicada de api.py (2026-07-22 · v1.9.2)
+`api.py` (el archivo más grande) nunca había tenido su auditoría dedicada. Hallazgos aplicados, todos verificados con la batería completa (16 unitarias + regresión 25/25 con hash idéntico):
+22. **La ruta del asesor con IA calculaba todo dos veces**: `advisor()` → `_insights()` calcula presupuesto, suscripciones y metas… y `_advisor_summary()` los recalculaba (incluido un segundo `_budget()` con sus consultas). Ahora `_insights` comparte sus intermedios por claves privadas (`_b`, `_subs_anual`) y el resumen para la IA los **reutiliza** — una sola pasada por petición.
+23. **`_msi_pending()`**: la deuda MSI pendiente estaba duplicada (dashboard y resumen IA) → helper único.
+24. **Fuga menor en la API**: `/insights` serializaba claves privadas de cálculo (`_subs_anual`) en el JSON público → el endpoint ahora las filtra.
+25. **`renderComercios`**: le faltaba el guard anti-carrera (`reqId`) que ya tenía `renderMovs`; búsquedas rápidas podían pintar resultados viejos → mismo patrón aplicado.
+**Skip consciente**: el flujo MSI mensual existe en `/msi` y en `_insights`, pero en `/msi` está entrelazado con la serialización de planes y la mutación a "liquidado" — compartirlo forzaría una abstracción artificial (DRY forzado = sobreingeniería). Se queda.
+
 ## 4. Verificación (regresión completa sobre datos reales)
 - **25/25 archivos** (18 estados 2026) importan y **concilian al centavo**; 0 fallos.
 - Dashboard: patrimonio **$3,532,045** ≈ tabla de [[09 Análisis Inversiones]] ✅.
