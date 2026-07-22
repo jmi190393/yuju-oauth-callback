@@ -8,10 +8,7 @@ import io
 import re
 
 import pdfplumber
-from ._util import money
-
-MESES = {"ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
-         "jul": 7, "ago": 8, "sept": 9, "sep": 9, "oct": 10, "nov": 11, "dic": 12}
+from ._util import MESES, money
 
 MOV_RE = re.compile(
     r"^(\d{1,2} \w{3,5}\.? \d{4}) (\d{1,2} \w{3,5}\.? \d{4}) (.+?) ([+-])\$([\d,]+\.\d{2})$")
@@ -23,7 +20,9 @@ MSI_RE = re.compile(
 
 def _to_iso(s):
     m = FECHA_RE.match(s)
-    d, mon, y = m.group(1), m.group(2).lower().rstrip("."), m.group(3)
+    if not m or m.group(2).lower() not in MESES:
+        raise ValueError(f"Fecha Revolut no reconocida: {s!r}")
+    d, mon, y = m.group(1), m.group(2).lower(), m.group(3)
     return f"{y}-{MESES[mon]:02d}-{int(d):02d}"
 
 
@@ -121,7 +120,7 @@ def parse_debit_csv(content: bytes) -> dict:
     dates = []
     inv_balance = None
     for r in rows:
-        if r["Estado"] != "COMPLETADO":
+        if r["Estado"] != "COMPLETADO" or not r.get("Importe"):
             continue
         fecha = r["Fecha de inicio"][:10]
         amt = float(r["Importe"])

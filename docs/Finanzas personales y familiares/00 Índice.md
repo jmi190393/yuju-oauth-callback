@@ -33,11 +33,12 @@ Bóveda de documentación del proyecto. Puedes abrir la carpeta `docs/Finanzas p
 | Resumen ejecutivo | ✅ Entregado (2026-07-21) |
 | Cuestionario final | ✅ Cerrado (2026-07-21) — 25/25 respondidas |
 | Construcción MVP | ✅ **Fase 1 construida** (2026-07-21) — carpeta `sistema/`, ver [[12 Manual del sistema]] |
-| Despliegue en la nube | ✅ **EN VIVO** en PythonAnywhere · v1.9 · datos 2026 cargados |
+| Despliegue en la nube | ✅ **EN VIVO** en PythonAnywhere · v1.9.1 · datos 2026 cargados |
 | Mejoras UX + catálogo asistido | ✅ v1.1→1.4 (ver [[15 Bitácora y versiones]]) |
 | Asesor (ahorro automático + IA) | ✅ v1.5 — gastos hormiga + chat con Claude (ver [[12 Manual del sistema]]) |
 | Lo mejor de las mejores apps | ✅ v1.6 — salud financiera, puedo gastar hoy, tendencia, mes vs mes, recurrentes |
 | Robustez + fórmulas verificadas | ✅ v1.7 — alertas de cobros inusuales, metas proyectadas, suite de pruebas, benchmark ([[05 Benchmark de apps]]) |
 | Optimización de arquitecto | ✅ v1.8 — Asesor en un solo escaneo de datos, sin cambios visibles ([[13 Arquitectura y calidad del código]]) |
 | Auditoría integral | ✅ v1.9 — seguridad (cookie Secure, login constante), índices, DRY, fix del buscador, suite de importadores ([[13 Arquitectura y calidad del código]]) |
+| Regresión real de importadores | ✅ v1.9.1 — 25/25 estados reales concilian; hash idéntico tras cerrar los refactors pospuestos |
 | Fase 2 (WhatsApp + facturación) | ⏸ Pendiente (al regreso del viaje) |

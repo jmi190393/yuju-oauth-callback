@@ -47,11 +47,16 @@ def parse(path: str) -> dict:
     period = None
     saldo_ini = saldo_fin = None
     with pdfplumber.open(path) as pdf:
+        # UNA sola extracción de palabras por página; de ahí salen las columnas,
+        # el texto para los encabezados y la clasificación de movimientos.
+        pages_lines = [_group_lines(page.extract_words()) for page in pdf.pages]
+
         col_x = {}
-        for page in pdf.pages:
-            for w in page.extract_words():
-                if w["text"] in ("CARGOS", "ABONOS") and w["text"] not in col_x:
-                    col_x[w["text"]] = (w["x0"] + w["x1"]) / 2
+        for lines in pages_lines:
+            for ws in lines:
+                for w in ws:
+                    if w["text"] in ("CARGOS", "ABONOS") and w["text"] not in col_x:
+                        col_x[w["text"]] = (w["x0"] + w["x1"]) / 2
             if len(col_x) == 2:
                 break
         if len(col_x) < 2:
@@ -60,8 +65,8 @@ def parse(path: str) -> dict:
         right_of_abonos = col_x["ABONOS"] + 45
 
         current = None
-        for page in pdf.pages:
-            text = page.extract_text() or ""
+        for lines in pages_lines:
+            text = "\n".join(" ".join(w["text"] for w in ws) for ws in lines)
             m = re.search(r"Periodo DEL (\d{2}/\d{2}/\d{4}) AL (\d{2}/\d{2}/\d{4})", text)
             if m:
                 period = (m.group(1), m.group(2))
@@ -72,7 +77,7 @@ def parse(path: str) -> dict:
             if m:
                 saldo_fin = money(m.group(1))
 
-            for ws in _group_lines(page.extract_words()):
+            for ws in lines:
                 texts = [w["text"] for w in ws]
                 line = " ".join(texts)
                 if line.startswith("Total de Movimientos"):

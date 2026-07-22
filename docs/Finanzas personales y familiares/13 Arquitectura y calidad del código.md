@@ -60,7 +60,14 @@ Auditoría de **todo** el proyecto (3 revisiones en paralelo: importadores, back
 **Robustez de importadores**
 18. **Amex ya no truena** ante una línea con forma de transacción pero cuyo "mes" no es un mes real (`_mes` lanzaba `KeyError` y abortaba todo el import): ahora se valida `tm.group(2) in MESES` y esas líneas se tratan como continuación.
 
-**Skips conscientes** (riesgo > valor sin la regresión de PDFs reales, que no corre en este entorno): refactor de doble extracción de páginas en BBVA, unificación de mapas de meses entre módulos, limpieza de grupos de captura de regex no usados. Quedan como recomendaciones futuras.
+**Skips conscientes** (en su momento, riesgo > valor sin la regresión de PDFs reales): refactor de doble extracción de páginas en BBVA, unificación de mapas de meses, limpieza de regex. **Cerrados en v1.9.1** (abajo) al recuperar los PDFs de la sesión y correr la regresión real.
+
+### Del cierre con regresión real (2026-07-22 · v1.9.1)
+Se recuperaron los **25 estados reales** de la sesión y se construyó `tests/test_regression_pdfs.py`: base limpia → importa todo → 25/25 conciliados al centavo → patrimonio $3,532,045 y MSI $136,602 exactos → **hash SHA-256 del parseo completo** como ancla. Con esa red se aplicaron los refactors pospuestos, verificando **hash idéntico** (`159a666845674017`) antes y después:
+19. **BBVA a una sola vía de extracción**: una lista de líneas por página (de `extract_words`) alimenta columnas, encabezados y movimientos; se eliminó el pase previo de detección y el `extract_text` paralelo. Medido honestamente: **misma velocidad** (pdfplumber cachea los caracteres) — el cambio se justifica por simplicidad (una sola fuente de líneas), no por rendimiento.
+20. **Mapa de meses único** (`_util.MESES`): Amex y Revolut compartían dos mapas casi iguales con el mismo nombre; ahora hay uno.
+21. **Guardas**: `_to_iso` de Revolut lanza `ValueError` claro (antes `AttributeError` opaco si el patrón derivara); el CSV de débito ignora filas con `Importe` vacío en vez de tronar; `last4` de Amex sin un `.replace` muerto.
+La regresión queda **permanente** en `tests/` (se salta sola donde no hay PDFs, p. ej. PythonAnywhere).
 
 ## 4. Verificación (regresión completa sobre datos reales)
 - **25/25 archivos** (18 estados 2026) importan y **concilian al centavo**; 0 fallos.

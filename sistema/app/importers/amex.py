@@ -7,12 +7,7 @@ completo de planes de pagos diferidos / MSI.
 import re
 
 import pdfplumber
-from ._util import money
-
-MESES = {"enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
-         "julio": 7, "agosto": 8, "septiembre": 9, "octubre": 10, "noviembre": 11,
-         "diciembre": 12, "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5,
-         "jun": 6, "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12}
+from ._util import MESES, money
 
 AMT = r"[\d,]+\.\d{2}"
 TXN_RE = re.compile(rf"^(\d{{1,2}}) de\s?(\w+) (.+?) ({AMT})( CR)?$")
@@ -143,7 +138,7 @@ def parse(path: str) -> dict:
     return {
         "bank": "amex",
         "account_hint": {"institution": "American Express", "kind": "credito",
-                         "last4": info["cuenta"][-5:].replace("-", "")},
+                         "last4": info["cuenta"][-5:]},
         "period": info["periodo"],
         "transactions": txns,
         "msi_plans": plans,

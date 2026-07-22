@@ -20,7 +20,7 @@ from .models import (Account, Category, Goal, ImportBatch, MsiPlan, Provision,
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
-APP_VERSION = "1.9"
+APP_VERSION = "1.9.1"
 GASTO_KINDS = ("fijo", "variable", "aprovisionamiento")
 
 
