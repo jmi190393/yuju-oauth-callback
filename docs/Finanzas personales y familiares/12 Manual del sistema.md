@@ -1,4 +1,4 @@
-# 12 · Manual del sistema (Fase 1 MVP · v1.5)
+# 12 · Manual del sistema (Fase 1 MVP · v1.6)
 
 El sistema vive en la carpeta `sistema/` del repositorio. Es una **PWA** (se instala en el celular desde el navegador), en español, con login para Jaime y Nurit. **Desplegado en la nube en PythonAnywhere**: `https://jmi190393.pythonanywhere.com`.
 
@@ -39,7 +39,14 @@ En **Más → Editar categorías**: busca cualquier comercio, ve su categoría a
 
 ### 🤖 Asesor (ahorro e IA)
 En **Más → Asesor**. Dos partes complementarias:
-- **Consejos automáticos** (gratis, siempre funcionan, sin internet): detectan tus **gastos hormiga** (compras chicas y frecuentes del mismo comercio — p. ej. varios Uber Eats — con su equivalente mensual y anual), el costo anual de suscripciones, cuántos meses te faltan para el fondo de emergencia con tu sobrante actual, el mes más pesado de MSI y la concentración de riesgo en instrumentos volátiles.
+- **Consejos automáticos** (gratis, siempre funcionan, sin internet). Reúne lo mejor de las mejores apps de finanzas:
+  - **Salud financiera 0–100** (estilo Fintonic): un solo número con 5 componentes (ahorro, fondo de emergencia, deuda MSI, gasto vs ingreso, suscripciones) y su explicación.
+  - **Gastos hormiga**: compras chicas y frecuentes del mismo comercio (p. ej. varios Uber Eats), con su equivalente mensual y anual.
+  - **Tendencia de gasto**: mini-gráfica de tu gasto real de los últimos 6 meses.
+  - **Este mes vs. el pasado** (estilo Copilot): qué categorías subieron o bajaron y cuánto.
+  - **Cargos recurrentes detectados** (estilo Rocket Money): servicios que se repiten mes con mes y que quizá no tienes registrados como suscripción.
+  - Además: costo anual de suscripciones, meses para el fondo de emergencia con tu sobrante, mes más pesado de MSI y concentración de riesgo.
+- En **Inicio** verás también **¿Puedo gastar hoy?** (estilo PocketGuard): cuánto te queda libre por día el resto del mes, ya restados fijos, seguros y MSI.
 - **Pregúntale al asesor (IA)**: un chat con Claude para optimizar, ahorrar y decidir metas. Trae preguntas sugeridas ("¿En qué 3 cosas puedo ahorrar sin sufrir?"). **Solo se le comparte un resumen agregado** (totales y categorías) — nunca números de cuenta ni movimientos individuales. Es una ayuda, no sustituye a un asesor profesional. Se activa poniendo una clave de Anthropic en el servidor (ver [[14 Despliegue en PythonAnywhere]] · Paso 7); si no está, el chat lo avisa y los consejos automáticos siguen disponibles.
 
 ### ☰ Más

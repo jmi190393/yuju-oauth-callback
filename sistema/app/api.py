@@ -20,7 +20,7 @@ from .models import (Account, Category, Goal, ImportBatch, MsiPlan, Provision,
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
-APP_VERSION = "1.5"
+APP_VERSION = "1.6"
 GASTO_KINDS = ("fijo", "variable", "aprovisionamiento")
 
 
@@ -588,6 +588,7 @@ def dashboard():
                      "sobrante_plan": b["sobrante_plan"],
                      "sobrante_real_proyectado": b["sobrante_real_proyectado"],
                      "msi_mes": b["msi_mes"],
+                     "puedo_gastar_hoy": _safe_to_spend(b, month),
                      "semaforo": "verde" if b["gasto_real"] <= umbral
                      else ("amarillo" if b["sobrante_real_proyectado"] > 0 else "rojo")},
         "que_viene": upcoming[:10],
@@ -876,6 +877,145 @@ def _gastos_hormiga(n_meses):
     return out
 
 
+def _nonspend_ids():
+    """Categorías que NO son gasto real (ingreso, transferencias, inversión)."""
+    return {c.id for c in db().query(Category)
+            if c.kind in ("ingreso", "transferencia", "inversion")}
+
+
+def _spent_by_category(month):
+    start, end = _month_bounds(month)
+    return dict(db().query(Transaction.category_id, func.sum(Transaction.amount))
+                .filter(Transaction.date >= start, Transaction.date <= end,
+                        Transaction.direction == "cargo")
+                .group_by(Transaction.category_id).all())
+
+
+def _safe_to_spend(b, month):
+    """"Puedo gastar hoy" (estilo PocketGuard): lo libre para el resto del mes,
+    después de fijos, aprovisionamiento, MSI y lo ya gastado en variables."""
+    start, end = _month_bounds(month)
+    today = date.today()
+    if start <= today <= end:
+        dias_rest = max((end - today).days + 1, 1)
+    else:
+        dias_rest = (end - start).days + 1
+    var_spent = sum(c["spent"] for c in b["categorias"] if c["kind"] == "variable")
+    disponible = (b["ingreso"] - b["aprovisionamiento"] - b["msi_mes"]
+                  - b["fijos_plan"] - var_spent)
+    return {"disponible_mes": round(disponible, 2),
+            "por_dia": round(disponible / dias_rest, 2),
+            "dias_restantes": dias_rest}
+
+
+def _spending_trend(n=6):
+    """Gasto real por mes en los últimos n meses (para la mini-gráfica)."""
+    this = date.today().strftime("%Y-%m")
+    non = _nonspend_ids()
+    out = []
+    for i in range(n - 1, -1, -1):
+        m = _add_months(this, -i)
+        start, end = _month_bounds(m)
+        rows = db().query(Transaction.category_id, func.sum(Transaction.amount)) \
+            .filter(Transaction.date >= start, Transaction.date <= end,
+                    Transaction.direction == "cargo") \
+            .group_by(Transaction.category_id).all()
+        total = sum(float(a) for cid, a in rows if cid not in non)
+        out.append({"month": m, "gasto": round(total, 2)})
+    return out
+
+
+def _mom(month):
+    """Comparativo mes vs mes por categoría (estilo Copilot): qué subió/bajó."""
+    prev = _add_months(month, -1)
+    cur, pre = _spent_by_category(month), _spent_by_category(prev)
+    non = _nonspend_ids()
+    names = {c.id: (c.emoji, c.name) for c in db().query(Category)}
+    movers = []
+    for cid in set(cur) | set(pre):
+        if cid is None or cid in non:
+            continue
+        c = float(cur.get(cid) or 0)
+        p = float(pre.get(cid) or 0)
+        if abs(c - p) < 1:  # sin cambio relevante → no es un "movimiento"
+            continue
+        emoji, name = names.get(cid, ("❓", "(sin categoría)"))
+        movers.append({"name": name, "emoji": emoji, "current": round(c, 2),
+                       "prev": round(p, 2), "diff": round(c - p, 2),
+                       "pct": round((c - p) / p * 100) if p else None})
+    movers.sort(key=lambda x: -abs(x["diff"]))
+    return {"month": month, "prev": prev, "movers": movers[:6]}
+
+
+def _recurrentes():
+    """Cargos que se repiten mes con mes (estilo Rocket Money): posibles
+    suscripciones o servicios que quizá no tienes en la lista. Excluye los que
+    ya están registrados como suscripción."""
+    non = _nonspend_ids()
+    rows = db().query(Transaction.description, Transaction.date,
+                      Transaction.amount, Transaction.category_id) \
+        .filter(Transaction.direction == "cargo").all()
+    groups = {}
+    for desc, d, amt, cid in rows:
+        if cid in non:
+            continue
+        k = merchant_key(desc)
+        gp = groups.setdefault(k, {"variants": set(), "months": set(), "amts": []})
+        gp["variants"].add(desc)
+        gp["months"].add(d.strftime("%Y-%m"))
+        gp["amts"].append(amt)
+    subs = [normalize(s.name) for s in db().query(Subscription) if s.name]
+    out = []
+    for gp in groups.values():
+        if len(gp["months"]) < 3:
+            continue
+        name = min(gp["variants"], key=len)
+        nn = normalize(name)
+        if any(nn and (nn in s or s in nn) for s in subs):
+            continue
+        avg = sum(gp["amts"]) / len(gp["amts"])
+        out.append({"description": name, "months": len(gp["months"]),
+                    "avg": round(avg, 2), "anual": round(avg * 12, 2)})
+    out.sort(key=lambda x: -x["anual"])
+    return out[:8]
+
+
+def _health_score(b, ins):
+    """Salud financiera 0–100 (estilo Fintonic): promedio ponderado de 5 señales
+    claras, cada una explicada."""
+    ingreso = b["ingreso"] or 1
+    clamp = lambda x: max(0.0, min(1.0, x))
+    gasto_mensual = (b["fijos_plan"] + b["variables_plan"] + b["aprovisionamiento"]) \
+        or b["gasto_real"] or 1
+
+    # 1) Tasa de ahorro (meta 20%)
+    sr = b["sobrante_real_proyectado"] / ingreso
+    s_ahorro = clamp(sr / 0.20)
+    # 2) Fondo de emergencia (meta 3 meses de gasto)
+    fondo = db().query(Goal).filter(Goal.name.ilike("%emergencia%")).first()
+    meses_cub = (fondo.current_amount / gasto_mensual) if fondo else 0
+    s_fondo = clamp(meses_cub / 3)
+    # 3) Carga de deuda MSI (mejor si el pago mensual es bajo vs ingreso)
+    s_deuda = clamp(1 - (b["msi_mes"] / ingreso) / 0.30)
+    # 4) Gasto vs ingreso (bueno ≤50%, malo ≥100%)
+    s_gasto = clamp(1 - (b["gasto_real"] / ingreso - 0.5) / 0.5)
+    # 5) Carga de suscripciones (bueno ≤ 5% del ingreso)
+    subs_mes = ins["_subs_anual"] / 12
+    s_subs = clamp(1 - (subs_mes / ingreso) / 0.10)
+
+    pesos = [("Ahorro", s_ahorro, 30), ("Fondo de emergencia", s_fondo, 25),
+             ("Deuda (MSI)", s_deuda, 20), ("Gasto vs ingreso", s_gasto, 15),
+             ("Suscripciones", s_subs, 10)]
+    score = round(sum(v * w for _, v, w in pesos))
+    label = ("Excelente" if score >= 80 else "Buena" if score >= 60
+             else "Regular" if score >= 40 else "Atención")
+    return {
+        "score": score, "label": label,
+        "meses_fondo": round(meses_cub, 1),
+        "componentes": [{"name": n, "pct": round(v * 100)} for n, v, _ in pesos],
+    }
+
+
 def _insights():
     """Diagnóstico automático (gratis, siempre funciona). Sin IA."""
     meses = _months_of_data()
@@ -972,13 +1112,20 @@ def _insights():
                     f"ese porcentaje te deja dormir tranquilo.",
             "level": "alerta" if pct >= 15 else "info"})
 
-    return {
+    data = {
         "generated_for": month,
         "tips": tips,
         "gastos_hormiga": hormiga[:12],
         "gastos_hormiga_mensual": total_hormiga_mes,
         "gastos_hormiga_anual": round(total_hormiga_mes * 12, 2),
+        "_subs_anual": round(anual_subs, 2),
+        "safe_to_spend": _safe_to_spend(b, month),
+        "trend": _spending_trend(6),
+        "mom": _mom(month),
+        "recurrentes": _recurrentes(),
     }
+    data["health"] = _health_score(b, data)
+    return data
 
 
 def _advisor_summary(ins):
@@ -1034,6 +1181,30 @@ def _advisor_summary(ins):
         L.append("Metas: " + "; ".join(
             f"{m['name']} {m['pct']}% ({_fmt(m['current_amount'])} de {_fmt(m['target_amount'])})"
             for m in metas) + ".")
+
+    # Salud financiera y "puedo gastar hoy"
+    h = ins.get("health") or {}
+    if h:
+        L.append(f"Salud financiera: {h['score']}/100 ({h['label']}). "
+                 "Componentes: " + ", ".join(
+                     f"{c['name']} {c['pct']}%" for c in h["componentes"]) + ".")
+    sts = ins.get("safe_to_spend") or {}
+    if sts:
+        L.append(f"Disponible libre para el resto del mes: {_fmt(sts['disponible_mes'])} "
+                 f"(~{_fmt(sts['por_dia'])}/día, {sts['dias_restantes']} días).")
+
+    # Movimientos mes vs mes
+    movers = (ins.get("mom") or {}).get("movers") or []
+    subieron = [m for m in movers if m["diff"] > 0][:3]
+    if subieron:
+        L.append("Categorías que más subieron vs el mes pasado: " + "; ".join(
+            f"{m['name']} {_fmt(m['current'])} (antes {_fmt(m['prev'])})" for m in subieron) + ".")
+
+    # Recurrentes no registrados como suscripción
+    rec = ins.get("recurrentes") or []
+    if rec:
+        L.append("Posibles cargos recurrentes NO registrados como suscripción: " + "; ".join(
+            f"{r['description']} (~{_fmt(r['avg'])}/mes)" for r in rec[:5]) + ".")
 
     return "\n".join(L)
 

@@ -204,6 +204,25 @@ h2 {
 }
 .bar i.ok { background: linear-gradient(90deg, var(--ok), #37c78d); }
 .bar i.alerta { background: linear-gradient(90deg, var(--warn), #e8b45a); }
+.bar.sm { height: 6px; margin-top: 0; flex: 1; }
+
+/* Salud financiera: componentes */
+.comp { display: flex; flex-direction: column; gap: 7px; }
+.comp-row { display: flex; align-items: center; gap: 10px; }
+.comp-row .meta { min-width: 118px; }
+.comp-row .meta.right { min-width: 34px; text-align: right; }
+
+/* Aviso suave (ej. IA no activada) */
+.note-warn {
+  background: var(--warn-soft); color: var(--warn);
+  border-radius: var(--r-md); padding: 11px 14px; margin-bottom: 12px;
+  font-size: .86rem; line-height: 1.5; text-align: justify; hyphens: auto;
+}
+
+/* Deltas mes vs mes */
+.neg { color: var(--bad); font-weight: 640; }
+.pos { color: var(--ok); font-weight: 640; }
+.big.neg { color: var(--bad); }
 .bar i.excedido { background: linear-gradient(90deg, var(--bad), #f07979); }
 
 /* ---------- Botones ---------- */

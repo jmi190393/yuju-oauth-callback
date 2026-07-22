@@ -107,6 +107,14 @@ async function renderInicio() {
     <div class="sub">Gastado ${money(cv.gasto_real)} · MSI del mes ${money(cv.msi_mes)} · plan de sobrante ${money(cv.sobrante_plan)}</div>
   </div>
 
+  ${cv.puedo_gastar_hoy ? `<div class="card">
+    <div class="q">¿Puedo gastar hoy?</div>
+    <div class="big ${cv.puedo_gastar_hoy.por_dia < 0 ? "neg" : ""}">${money(cv.puedo_gastar_hoy.por_dia)} <small>al día</small></div>
+    <div class="sub">${cv.puedo_gastar_hoy.disponible_mes < 0
+      ? "Vas por encima de tu plan este mes. Con calma los próximos días."
+      : `Libre para el resto del mes: ${money(cv.puedo_gastar_hoy.disponible_mes)} en ${cv.puedo_gastar_hoy.dias_restantes} días (ya restados fijos, seguros y MSI).`}</div>
+  </div>` : ""}
+
   <div class="card">
     <div class="q">¿Qué viene? (30 días)</div>
     ${d.que_viene.map((u) => `
@@ -429,10 +437,31 @@ function renderMas() {
   });
 }
 
+function trendBars(trend) {
+  // Mini-gráfica de barras (SVG puro, sin dependencias) del gasto por mes.
+  const max = Math.max(...trend.map((t) => t.gasto), 1);
+  const W = 300, H = 96, n = trend.length, gap = 10;
+  const bw = (W - gap * (n - 1)) / n;
+  const mName = (m) => new Date(m + "-15T12:00:00").toLocaleDateString("es-MX", { month: "short" });
+  const bars = trend.map((t, i) => {
+    const h = Math.max((t.gasto / max) * (H - 22), 2);
+    const x = i * (bw + gap), y = H - h - 14;
+    const last = i === n - 1;
+    return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="4"
+      fill="var(--brand)" opacity="${last ? 1 : 0.42}"></rect>
+      <text x="${x + bw / 2}" y="${H - 2}" text-anchor="middle"
+        font-size="9" fill="var(--muted)">${mName(t.month)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Gasto por mes">${bars}</svg>`;
+}
+
 async function renderAsesor() {
   $app.innerHTML = `<div class="loading">Cargando…</div>`;
   const ins = await api("/insights");
   const nivel = { bueno: "verde", info: "amarillo", alerta: "rojo" };
+  const h = ins.health;
+  const salud = h.score >= 80 ? "verde" : h.score >= 60 ? "verde" : h.score >= 40 ? "amarillo" : "rojo";
+  const mom = ins.mom || { movers: [] };
   const sugeridas = [
     "¿En qué 3 cosas puedo ahorrar sin sufrir?",
     "¿Cómo elimino mis gastos hormiga este mes?",
@@ -443,6 +472,21 @@ async function renderAsesor() {
   <h1>Asesor</h1>
   <p class="lead">Consejos automáticos de tus números (gratis) y, si está activado, un
   asesor con inteligencia artificial para optimizar, ahorrar y cazar gastos hormiga.</p>
+
+  ${h ? `
+  <div class="card">
+    <div class="q">🩺 Salud financiera <span class="pill ${salud}">${esc(h.label)}</span></div>
+    <div class="big">${h.score}<small> / 100</small></div>
+    <div class="bar mt"><i style="width:${h.score}%"></i></div>
+    <div class="comp mt">
+      ${h.componentes.map((c) => `
+        <div class="comp-row"><span class="meta">${esc(c.name)}</span>
+          <span class="bar sm"><i style="width:${c.pct}%"></i></span>
+          <span class="meta right">${c.pct}%</span></div>`).join("")}
+    </div>
+    <div class="sub">Tu colchón cubre ~${h.meses_fondo} meses de gasto. Sube el fondo de
+    emergencia y baja las suscripciones para mejorar el número.</div>
+  </div>` : ""}
 
   ${ins.gastos_hormiga_mensual > 0 ? `
   <div class="card">
@@ -459,6 +503,38 @@ async function renderAsesor() {
     <p class="sub" style="text-align:justify">${esc(t.body)}</p>
   </div>`).join("")}
 
+  ${ins.trend && ins.trend.some((t) => t.gasto > 0) ? `
+  <h2>Tendencia de gasto</h2>
+  <div class="card">
+    ${trendBars(ins.trend)}
+    <div class="sub">Gasto real por mes (últimos 6). El mes en curso resaltado.</div>
+  </div>` : ""}
+
+  ${mom.movers.length ? `
+  <h2>Este mes vs. el pasado</h2>
+  <div class="card">
+    ${mom.movers.map((m) => `
+      <div class="row"><div class="l">
+        <div class="name">${m.emoji} ${esc(m.name)}</div>
+        <div class="meta">antes ${money(m.prev)}${m.pct !== null ? ` · ${m.diff > 0 ? "+" : ""}${m.pct}%` : ""}</div>
+      </div><div class="amt">
+        <span class="${m.diff > 0 ? "neg" : "pos"}">${m.diff > 0 ? "▲" : "▼"} ${money(Math.abs(m.diff))}</span>
+        <div class="meta right">ahora ${money(m.current)}</div></div></div>`).join("")}
+    <div class="sub">Lo que más se movió respecto al mes anterior.</div>
+  </div>` : ""}
+
+  ${ins.recurrentes && ins.recurrentes.length ? `
+  <h2>Cargos recurrentes detectados</h2>
+  <div class="card">
+    <div class="sub" style="margin-top:0">Se repiten mes con mes y NO están en tu lista de
+    suscripciones. Revisa si aún los usas o si conviene registrarlos.</div>
+    ${ins.recurrentes.map((r) => `
+      <div class="row"><div class="l">
+        <div class="name">${esc(r.description)}</div>
+        <div class="meta">${r.months} meses seguidos</div>
+      </div><div class="amt">${money(r.avg)}<div class="meta right">/mes aprox.</div></div></div>`).join("")}
+  </div>` : ""}
+
   ${ins.gastos_hormiga.length ? `
   <h2>Dónde se va el goteo</h2>
   <div class="card">
@@ -471,8 +547,9 @@ async function renderAsesor() {
 
   <h2>Pregúntale al asesor 🤖</h2>
   <div class="card">
-    ${ins.ai_available ? "" : `<div class="pill amarillo" style="margin-bottom:10px">
-      IA no activada — se enciende poniendo una clave de Anthropic en el servidor</div>`}
+    ${ins.ai_available ? "" : `<div class="note-warn">🔒 <b>IA no activada.</b> Se enciende
+      poniendo una clave de Anthropic en el servidor (ver el instructivo de despliegue). Mientras
+      tanto, los consejos automáticos de arriba funcionan igual.</div>`}
     <div class="chips" id="sug">
       ${sugeridas.map((q) => `<button class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join("")}
     </div>
