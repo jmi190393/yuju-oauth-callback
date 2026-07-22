@@ -4,7 +4,7 @@ import hashlib
 import json
 import os
 import tempfile
-from datetime import date
+from datetime import date, timedelta
 
 from flask import Blueprint, g, jsonify, request
 from sqlalchemy import func
@@ -20,7 +20,7 @@ from .models import (Account, Category, Goal, ImportBatch, MsiPlan, Provision,
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
-APP_VERSION = "1.6"
+APP_VERSION = "1.7"
 GASTO_KINDS = ("fijo", "variable", "aprovisionamiento")
 
 
@@ -49,8 +49,16 @@ def _setting(key, default=None):
     return s.value if s else default
 
 
+def _setting_float(key, default):
+    """Lee un ajuste numérico sin reventar si quedó guardado con basura."""
+    try:
+        return float(_setting(key, default))
+    except (TypeError, ValueError):
+        return float(default)
+
+
 def _tc_usd():
-    return float(_setting("tc_usd", "18.5"))
+    return _setting_float("tc_usd", 18.5)
 
 
 def to_mxn(amount, currency, tc):
@@ -344,7 +352,7 @@ def delete_transaction(txn_id):
 
 def _budget(month):
     start, end = _month_bounds(month)
-    ingreso = float(_setting("ingreso_mensual", "0"))
+    ingreso = _setting_float("ingreso_mensual", 0)
     cats = db().query(Category).order_by(Category.sort).all()
     spent = dict(
         db().query(Transaction.category_id, func.sum(Transaction.amount))
@@ -489,21 +497,49 @@ def patch_sub(sub_id):
 
 # ---------- metas ----------
 
-def _goals_list():
+def _project_goal(falta, sobrante, target_date):
+    """Proyección de cumplimiento de una meta:
+    - aporte_requerido: cuánto apartar al mes para llegar a target_date (si hay).
+    - fecha_estimada / meses_estimados: al ritmo del sobrante disponible.
+    Devuelve None en las piezas que no apliquen (sin fecha meta, sin sobrante)."""
+    today = date.today()
+    proj = {"aporte_requerido": None, "meses_estimados": None,
+            "fecha_estimada": None, "cumplida": falta <= 0}
+    if falta <= 0:
+        return proj
+    if target_date and target_date > today:
+        meses_rest = max((target_date.year - today.year) * 12
+                         + (target_date.month - today.month), 1)
+        proj["aporte_requerido"] = round(falta / meses_rest, 2)
+    if sobrante and sobrante > 0:
+        meses = falta / sobrante
+        proj["meses_estimados"] = round(meses, 1)
+        fin = _add_months(today.strftime("%Y-%m"), int(meses + 0.9999))
+        proj["fecha_estimada"] = f"{fin}-01"
+    return proj
+
+
+def _goals_list(sobrante=None):
     out = []
     for gl in db().query(Goal).order_by(Goal.id):
-        out.append({"id": gl.id, "name": gl.name, "emoji": gl.emoji,
-                    "target_amount": gl.target_amount, "current_amount": gl.current_amount,
-                    "pct": round(gl.current_amount / gl.target_amount * 100) if gl.target_amount else 0,
-                    "target_date": gl.target_date.isoformat() if gl.target_date else None,
-                    "notes": gl.notes})
+        falta = max((gl.target_amount or 0) - (gl.current_amount or 0), 0)
+        item = {"id": gl.id, "name": gl.name, "emoji": gl.emoji,
+                "target_amount": gl.target_amount, "current_amount": gl.current_amount,
+                "pct": round(gl.current_amount / gl.target_amount * 100) if gl.target_amount else 0,
+                "falta": round(falta, 2),
+                "target_date": gl.target_date.isoformat() if gl.target_date else None,
+                "notes": gl.notes}
+        if sobrante is not None:
+            item["proyeccion"] = _project_goal(falta, sobrante, gl.target_date)
+        out.append(item)
     return out
 
 
 @bp.get("/goals")
 @login_required
 def list_goals():
-    return jsonify(_goals_list())
+    b = _budget(date.today().strftime("%Y-%m"))
+    return jsonify(_goals_list(b["sobrante_real_proyectado"]))
 
 
 @bp.patch("/goals/<int:goal_id>")
@@ -592,7 +628,7 @@ def dashboard():
                      "semaforo": "verde" if b["gasto_real"] <= umbral
                      else ("amarillo" if b["sobrante_real_proyectado"] > 0 else "rojo")},
         "que_viene": upcoming[:10],
-        "metas": _goals_list(),
+        "metas": _goals_list(b["sobrante_real_proyectado"]),
         "cuanto_valgo": {"patrimonio_mxn": round(networth, 2),
                          "msi_pendiente": round(msi_pending, 2), "tc_usd": tc},
     })
@@ -947,10 +983,40 @@ def _mom(month):
     return {"month": month, "prev": prev, "movers": movers[:6]}
 
 
+def _median(xs):
+    s = sorted(xs)
+    n = len(s)
+    if n == 0:
+        return 0.0
+    mid = n // 2
+    return s[mid] if n % 2 else (s[mid - 1] + s[mid]) / 2
+
+
+def _is_stable(amts):
+    """¿Los montos se parecen entre sí? (lo que hace 'recurrente' a un cargo:
+    mismo importe cada vez). Alineado con la industria (Plaid/Rocket Money): un
+    flujo "fijo" tiene variación de monto baja (~≤10-20%); los de monto variable
+    se tratan aparte. Toleramos un ~25% para permitir un cambio de precio ocasional
+    (ej. subida de tarifa), pero excluimos gasto claramente variable ($200 vs $3,000)."""
+    amts = [a for a in amts if a > 0]
+    if len(amts) < 2:
+        return True
+    lo, hi = min(amts), max(amts)
+    if hi <= 1.25 * lo:
+        return True
+    mean = sum(amts) / len(amts)
+    if mean <= 0:
+        return False
+    var = sum((a - mean) ** 2 for a in amts) / len(amts)
+    cv = (var ** 0.5) / mean  # coeficiente de variación
+    return cv < 0.15
+
+
 def _recurrentes():
-    """Cargos que se repiten mes con mes (estilo Rocket Money): posibles
-    suscripciones o servicios que quizá no tienes en la lista. Excluye los que
-    ya están registrados como suscripción."""
+    """Cargos que se repiten mes con mes CON MONTO ESTABLE (estilo Rocket Money):
+    posibles suscripciones o servicios que quizá no tienes en la lista. Excluye
+    los ya registrados como suscripción y los de monto muy variable (esos son
+    gasto variable, no un cargo recurrente)."""
     non = _nonspend_ids()
     rows = db().query(Transaction.description, Transaction.date,
                       Transaction.amount, Transaction.category_id) \
@@ -967,17 +1033,47 @@ def _recurrentes():
     subs = [normalize(s.name) for s in db().query(Subscription) if s.name]
     out = []
     for gp in groups.values():
-        if len(gp["months"]) < 3:
+        if len(gp["months"]) < 3 or not _is_stable(gp["amts"]):
             continue
         name = min(gp["variants"], key=len)
         nn = normalize(name)
         if any(nn and (nn in s or s in nn) for s in subs):
             continue
-        avg = sum(gp["amts"]) / len(gp["amts"])
+        tipico = round(_median(gp["amts"]), 2)  # mediana: más robusta que el promedio
         out.append({"description": name, "months": len(gp["months"]),
-                    "avg": round(avg, 2), "anual": round(avg * 12, 2)})
+                    "avg": tipico, "anual": round(tipico * 12, 2)})
     out.sort(key=lambda x: -x["anual"])
     return out[:8]
+
+
+def _alertas_inusuales(dias=75):
+    """Cobros anómalos (estilo Fintonic): un cargo mucho más grande de lo normal
+    para ese comercio. Compara cada cargo reciente contra la mediana histórica de
+    su comercio; marca los que la superan 2.5x (y son montos relevantes)."""
+    non = _nonspend_ids()
+    rows = db().query(Transaction.description, Transaction.date, Transaction.amount,
+                      Transaction.category_id).filter(Transaction.direction == "cargo").all()
+    hist = {}
+    for desc, d, amt, cid in rows:
+        if cid in non:
+            continue
+        hist.setdefault(merchant_key(desc), []).append((d, amt, desc))
+    corte = date.today() - timedelta(days=dias)
+    out = []
+    for amts in hist.values():
+        montos = [a for _, a, _ in amts]
+        if len(montos) < 3:
+            continue
+        med = _median(montos)
+        if med <= 0:
+            continue
+        for d, amt, desc in amts:
+            if d >= corte and amt >= 2.5 * med and amt >= 500:
+                out.append({"description": desc, "date": d.isoformat(),
+                            "amount": round(amt, 2), "tipico": round(med, 2),
+                            "veces": round(amt / med, 1)})
+    out.sort(key=lambda x: -x["amount"])
+    return out[:6]
 
 
 def _health_score(b, ins):
@@ -1123,8 +1219,20 @@ def _insights():
         "trend": _spending_trend(6),
         "mom": _mom(month),
         "recurrentes": _recurrentes(),
+        "alertas": _alertas_inusuales(),
+        "metas": _goals_list(b["sobrante_real_proyectado"]),
     }
     data["health"] = _health_score(b, data)
+
+    # Tip de cobro inusual (lo más accionable para revisar de inmediato)
+    if data["alertas"]:
+        a = data["alertas"][0]
+        tips.insert(0, {
+            "icon": "🚨", "title": "Cobro fuera de lo normal",
+            "body": f"{a['description']} por {_fmt(a['amount'])} el {a['date']} — "
+                    f"{a['veces']}x lo habitual en ese comercio ({_fmt(a['tipico'])}). "
+                    f"Verifica que sea correcto.",
+            "level": "alerta"})
     return data
 
 
@@ -1205,6 +1313,12 @@ def _advisor_summary(ins):
     if rec:
         L.append("Posibles cargos recurrentes NO registrados como suscripción: " + "; ".join(
             f"{r['description']} (~{_fmt(r['avg'])}/mes)" for r in rec[:5]) + ".")
+
+    # Cobros inusuales
+    al = ins.get("alertas") or []
+    if al:
+        L.append("Cobros fuera de lo normal detectados: " + "; ".join(
+            f"{a['description']} {_fmt(a['amount'])} ({a['veces']}x lo típico)" for a in al[:4]) + ".")
 
     return "\n".join(L)
 

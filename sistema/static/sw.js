@@ -3,7 +3,7 @@
  * - Estáticos: se cachean SOLO si la respuesta fue exitosa (r.ok).
  * Subir CACHE_VERSION invalida cachés viejas en el próximo activate.
  */
-const CACHE = "finanzas-v4";
+const CACHE = "finanzas-v5";
 
 self.addEventListener("install", () => self.skipWaiting());
 

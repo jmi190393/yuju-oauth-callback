@@ -486,6 +486,9 @@ async function renderAsesor() {
     </div>
     <div class="sub">Tu colchón cubre ~${h.meses_fondo} meses de gasto. Sube el fondo de
     emergencia y baja las suscripciones para mejorar el número.</div>
+    <div class="meta" style="margin-top:8px">Índice propio basado en reglas estándar de
+    finanzas personales (ahorro 20% de la regla 50/30/20, fondo de 3–6 meses, deuda 28/36).
+    Es una guía, no un puntaje oficial de banco.</div>
   </div>` : ""}
 
   ${ins.gastos_hormiga_mensual > 0 ? `
@@ -523,11 +526,23 @@ async function renderAsesor() {
     <div class="sub">Lo que más se movió respecto al mes anterior.</div>
   </div>` : ""}
 
+  ${ins.alertas && ins.alertas.length ? `
+  <h2>Cobros inusuales 🚨</h2>
+  <div class="card">
+    <div class="sub" style="margin-top:0">Cargos mucho más grandes de lo normal para ese
+    comercio. Verifica que sean correctos (errores, cargos duplicados o no reconocidos).</div>
+    ${ins.alertas.map((a) => `
+      <div class="row"><div class="l">
+        <div class="name">${esc(a.description)}</div>
+        <div class="meta">${fdate(a.date)} · ${a.veces}× lo típico (${money(a.tipico)})</div>
+      </div><div class="amt neg">${money(a.amount)}</div></div>`).join("")}
+  </div>` : ""}
+
   ${ins.recurrentes && ins.recurrentes.length ? `
   <h2>Cargos recurrentes detectados</h2>
   <div class="card">
-    <div class="sub" style="margin-top:0">Se repiten mes con mes y NO están en tu lista de
-    suscripciones. Revisa si aún los usas o si conviene registrarlos.</div>
+    <div class="sub" style="margin-top:0">Se repiten mes con mes (con monto estable) y NO están
+    en tu lista de suscripciones. Revisa si aún los usas o si conviene registrarlos.</div>
     ${ins.recurrentes.map((r) => `
       <div class="row"><div class="l">
         <div class="name">${esc(r.description)}</div>
@@ -635,14 +650,28 @@ async function renderMetas() {
   const goals = await api("/goals");
   $app.innerHTML = `
   <h1>Metas</h1>
-  ${goals.map((g) => `
+  ${goals.map((g) => {
+    const p = g.proyeccion || {};
+    let proy = "";
+    if (p.cumplida) {
+      proy = `<div class="note-ok mt">✅ Meta cumplida. ¡Felicidades!</div>`;
+    } else {
+      const partes = [];
+      if (p.aporte_requerido) partes.push(`Para llegar a tu fecha meta, aparta <b>${money(p.aporte_requerido)}/mes</b>.`);
+      if (p.fecha_estimada) partes.push(`Si le dedicas tu sobrante actual, la completas ~<b>${fdate(p.fecha_estimada)}</b> (${p.meses_estimados} meses).`);
+      if (!partes.length && g.falta > 0) partes.push(`Te faltan <b>${money(g.falta)}</b>. Genera sobrante mensual para proyectar una fecha.`);
+      if (partes.length) proy = `<div class="note-proj mt">🔮 ${partes.join(" ")}</div>`;
+    }
+    return `
   <div class="card">
     <div class="name" style="font-size:1.05rem">${g.emoji} ${esc(g.name)}</div>
     <div class="bar mt"><i style="width:${Math.min(g.pct, 100)}%"></i></div>
     <div class="sub">${money(g.current_amount)} de ${money(g.target_amount)} (${g.pct}%)${g.target_date ? " · para " + fdate(g.target_date) : ""}</div>
     ${g.notes ? `<div class="sub">${esc(g.notes)}</div>` : ""}
+    ${proy}
     <div class="mt"><button class="btn-line" data-id="${g.id}" data-cur="${g.current_amount}">Actualizar monto</button></div>
-  </div>`).join("")}`;
+  </div>`;
+  }).join("")}`;
   $app.querySelectorAll("[data-id]").forEach((b) => b.onclick = async () => {
     const v = prompt("¿Cuánto llevas ahorrado para esta meta?", b.dataset.cur);
     if (v === null) return;

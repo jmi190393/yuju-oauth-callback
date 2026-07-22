@@ -218,6 +218,13 @@ h2 {
   border-radius: var(--r-md); padding: 11px 14px; margin-bottom: 12px;
   font-size: .86rem; line-height: 1.5; text-align: justify; hyphens: auto;
 }
+.note-ok, .note-proj {
+  border-radius: var(--r-md); padding: 10px 13px;
+  font-size: .86rem; line-height: 1.5; text-align: justify; hyphens: auto;
+}
+.note-ok { background: var(--ok-soft); color: var(--ok); }
+.note-proj { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line); }
+.note-proj b, .note-ok b { font-weight: 680; }
 
 /* Deltas mes vs mes */
 .neg { color: var(--bad); font-weight: 640; }
