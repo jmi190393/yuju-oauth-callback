@@ -10,9 +10,15 @@
 //   ML_CLIENT_ID=... ML_CLIENT_SECRET=... ML_REDIRECT_URI=https://... \
 //     node meli/oportunidades.mjs token <code>
 //
-// Requiere Node 18+ (fetch nativo). Solo lee datos: no modifica ninguna publicacion.
+// Aplicar cambios desde un archivo JSON (ver meli/cambios.ejemplo.json):
+//   ML_ACCESS_TOKEN=... node meli/oportunidades.mjs aplicar cambios.json              # solo vista previa
+//   ML_ACCESS_TOKEN=... node meli/oportunidades.mjs aplicar cambios.json --confirmar  # pregunta item por item
+//
+// Requiere Node 18+ (fetch nativo). El reporte solo lee; unicamente "aplicar --confirmar"
+// modifica publicaciones, y antes guarda los valores anteriores para poder revertir.
 
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+import { createInterface } from "node:readline/promises";
 
 const API = "https://api.mercadolibre.com";
 const CONCURRENCY = 5;
@@ -22,18 +28,19 @@ function arg(name, fallback) {
   return i > -1 ? process.argv[i + 1] : fallback;
 }
 
-async function api(path, { token, method = "GET", body, retries = 3 } = {}) {
+async function api(path, { token, method = "GET", body, json, retries = 3 } = {}) {
   const res = await fetch(API + path, {
     method,
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+      ...(json ? { "Content-Type": "application/json" } : {}),
     },
-    body,
+    body: json ? JSON.stringify(json) : body,
   });
   if (res.status === 429 && retries > 0) {
     await new Promise((r) => setTimeout(r, 2000));
-    return api(path, { token, method, body, retries: retries - 1 });
+    return api(path, { token, method, body, json, retries: retries - 1 });
   }
   const data = await res.json().catch(() => null);
   if (!res.ok) {
@@ -187,7 +194,148 @@ async function report() {
   console.log(`\nDetalle completo: ${outBase}.csv y ${outBase}.json`);
 }
 
-const main = process.argv[2] === "token" ? () => exchangeCode(process.argv[3]) : report;
+// ---- Modo aplicar ----
+// cambios.json: [{ "id": "MLM123", "title": "...", "attributes": [{ "id": "BRAND", "value_name": "..." }],
+//                  "description": "texto plano" }]  — cada campo es opcional.
+
+const attrValue = (a) => a?.value_name ?? (a?.value_id ? `#${a.value_id}` : "");
+const short = (s, n = 160) => (s.length > n ? `${s.slice(0, n)}…` : s);
+
+// Compara lo pedido contra lo publicado; devuelve solo lo que realmente cambia.
+async function planChange(token, change) {
+  const item = await api(`/items/${change.id}?attributes=id,title,sold_quantity,catalog_listing,status,attributes`, { token });
+  const plan = { id: change.id, item, warnings: [], before: { id: change.id } };
+
+  if (change.title != null && change.title !== item.title) {
+    plan.title = change.title;
+    plan.before.title = item.title;
+    if (item.sold_quantity > 0) plan.warnings.push("tiene ventas: Mercado Libre suele rechazar cambios de titulo");
+    if (item.catalog_listing) plan.warnings.push("es publicacion de catalogo: el titulo lo define el catalogo");
+  }
+
+  const current = new Map((item.attributes ?? []).map((a) => [a.id, a]));
+  const attrs = (change.attributes ?? []).filter((a) => {
+    const cur = current.get(a.id);
+    return !cur || (a.value_name != null ? a.value_name !== cur.value_name : a.value_id !== cur.value_id);
+  });
+  if (attrs.length) {
+    plan.attributes = attrs;
+    plan.before.attributes = attrs.map((a) => {
+      const cur = current.get(a.id);
+      return cur ? { id: a.id, value_id: cur.value_id, value_name: cur.value_name } : { id: a.id, value_name: null };
+    });
+  }
+
+  if (change.description != null) {
+    const desc = await api(`/items/${change.id}/description`, { token }).catch((e) => (e.status === 404 ? {} : Promise.reject(e)));
+    if ((desc.plain_text ?? "") !== change.description) {
+      plan.description = change.description;
+      plan.before.description = desc.plain_text ?? "";
+    }
+  }
+  return plan;
+}
+
+function printPlan(plan) {
+  console.log(`\n${plan.id}  ${plan.item.title}  (${plan.item.status}, ${plan.item.sold_quantity ?? 0} vendidos)`);
+  if (plan.title != null) console.log(`  titulo:\n    - ${plan.before.title}\n    + ${plan.title}  (${plan.title.length} caracteres)`);
+  for (const a of plan.attributes ?? []) {
+    const prev = plan.before.attributes.find((b) => b.id === a.id);
+    console.log(`  atributo ${a.id}: ${attrValue(prev) || "(vacio)"} -> ${attrValue(a)}`);
+  }
+  if (plan.description != null) {
+    console.log(`  descripcion (${plan.before.description.length} -> ${plan.description.length} caracteres):`);
+    console.log(`    - ${short(plan.before.description.replace(/\s+/g, " ")) || "(vacia)"}`);
+    console.log(`    + ${short(plan.description.replace(/\s+/g, " "))}`);
+  }
+  for (const w of plan.warnings) console.log(`  ! ${w}`);
+}
+
+// Cada parte va en su propia llamada: si ML rechaza el titulo, los atributos y la
+// descripcion igual se aplican. Devuelve los valores anteriores solo de lo aplicado.
+async function applyPlan(token, plan) {
+  const parts = [
+    ["attributes", () => api(`/items/${plan.id}`, { token, method: "PUT", json: { attributes: plan.attributes } })],
+    ["title", () => api(`/items/${plan.id}`, { token, method: "PUT", json: { title: plan.title } })],
+    ["description", () => api(`/items/${plan.id}/description?api_version=2`, { token, method: "PUT", json: { plain_text: plan.description } })],
+  ];
+  const before = { id: plan.id };
+  const errors = [];
+  for (const [field, put] of parts) {
+    if (plan[field] == null) continue;
+    try {
+      await put();
+      before[field] = plan.before[field];
+    } catch (e) {
+      errors.push(`${field}: ${e.message}`);
+    }
+  }
+  return { before, errors };
+}
+
+async function applyChanges() {
+  const token = process.env.ML_ACCESS_TOKEN;
+  if (!token) throw new Error("Define ML_ACCESS_TOKEN (token APP_USR-... del vendedor)");
+  const file = process.argv[3];
+  if (!file) throw new Error("Uso: node meli/oportunidades.mjs aplicar cambios.json [--confirmar]");
+  const confirm = process.argv.includes("--confirmar");
+  if (confirm && !process.stdin.isTTY) throw new Error("--confirmar necesita una terminal interactiva para preguntar item por item");
+
+  const changes = JSON.parse(await readFile(file, "utf8"));
+  const plans = [];
+  for (const change of changes) {
+    try {
+      const plan = await planChange(token, change);
+      if (plan.title == null && !plan.attributes && plan.description == null) {
+        console.log(`\n${change.id}: sin cambios (ya coincide con lo publicado)`);
+        continue;
+      }
+      printPlan(plan);
+      plans.push(plan);
+    } catch (e) {
+      console.log(`\n${change.id}: ERROR al leer la publicacion: ${e.message}`);
+    }
+  }
+
+  if (!confirm) {
+    console.log(`\nVista previa: ${plans.length} publicaciones con cambios. No se modifico nada.`);
+    console.log("Para aplicarlos, repite el comando con --confirmar.");
+    return;
+  }
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const undoFile = `revertir-${stamp}.json`;
+  const undo = [];
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  let all = false;
+  let applied = 0;
+  try {
+    for (const plan of plans) {
+      if (!all) {
+        const ans = (await rl.question(`\n¿Aplicar cambios a ${plan.id}? [s]i / [n]o / [t]odos / [q] salir: `)).trim().toLowerCase();
+        if (ans === "q") break;
+        if (ans === "t") all = true;
+        else if (ans !== "s") continue;
+      }
+      const { before, errors } = await applyPlan(token, plan);
+      if (Object.keys(before).length > 1) {
+        undo.push(before);
+        // Se guarda despues de cada item para no perder el respaldo si algo falla a medias.
+        await writeFile(undoFile, JSON.stringify(undo, null, 2));
+        applied++;
+        console.log(`  ✓ ${plan.id} actualizado: ${Object.keys(before).slice(1).join(", ")}`);
+      }
+      for (const err of errors) console.log(`  ✗ ${plan.id} ${err}`);
+    }
+  } finally {
+    rl.close();
+  }
+  console.log(`\n${applied} publicaciones actualizadas.`);
+  if (applied) console.log(`Valores anteriores en ${undoFile} (para revertir: aplicar ${undoFile} --confirmar)`);
+}
+
+const commands = { token: () => exchangeCode(process.argv[3]), aplicar: applyChanges };
+const main = commands[process.argv[2]] || report;
 main().catch((e) => {
   console.error(e.message);
   process.exit(1);
